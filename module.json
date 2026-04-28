@@ -1,0 +1,25 @@
+{
+  "id": "macro-dashboard",
+  "title": "Macro Dashboard",
+  "description": "A scene-aware dashboard for organizing and triggering macros. GMs drag macros and preset groups onto tabbed dashboards bound to scenes (or made global), and toggle the dashboard via a scene-controls tool button or hotkey.",
+  "version": "#{VERSION}#",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13",
+    "maximum": ""
+  },
+  "authors": [
+    { "name": "Vebjorn Nyvoll", "email": "vebjorn.nyvoll@gmail.com" }
+  ],
+  "esmodules": ["scripts/module.mjs"],
+  "styles": ["styles/tokens.css", "styles/macro-dashboard.css"],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" }
+  ],
+  "url": "#{URL}#",
+  "manifest": "#{MANIFEST}#",
+  "download": "#{DOWNLOAD}#",
+  "license": "MIT",
+  "readme": "README.md",
+  "flags": {}
+}

@@ -1,0 +1,55 @@
+{{!-- Macro Library window template - search, tabs, draggable rows --}}
+<div class="md-library macro-dashboard">
+
+  <div class="md-lib-search">
+    <input type="search" class="md-lib-search-input"
+           placeholder="{{localize "MACRO_DASHBOARD.Library.SearchPlaceholder"}}"
+           value="{{term}}"/>
+  </div>
+
+  <div class="md-lib-tabs">
+    <button class="md-lib-tab {{#if isMacrosTab}}active{{/if}}"
+            data-action="switchLibTab" data-lib-tab="macros">
+      <i class="fa-solid fa-bolt"></i> {{localize "MACRO_DASHBOARD.Library.Tab.Macros"}} · {{macroCount}}
+    </button>
+    <button class="md-lib-tab {{#if isGroupsTab}}active{{/if}}"
+            data-action="switchLibTab" data-lib-tab="groups">
+      <i class="fa-solid fa-folder"></i> {{localize "MACRO_DASHBOARD.Library.Tab.Groups"}}
+    </button>
+  </div>
+
+  <div class="md-lib-body">
+
+    {{#if isMacrosTab}}
+      <div class="md-lib-section-head">
+        <span>{{localize "MACRO_DASHBOARD.Library.AllMacros"}}</span>
+        <span>{{macroCount}}</span>
+      </div>
+
+      {{#each macros}}
+        <div class="md-lib-row" data-macro-id="{{id}}" draggable="true" title="{{name}}">
+          <div class="md-tile-icon-mini"><img src="{{img}}" alt=""/></div>
+          <div class="md-lib-row-meta">
+            <div class="md-lib-row-name">{{name}}</div>
+            {{#if cmd}}<div class="md-lib-row-desc">{{cmd}}</div>{{/if}}
+          </div>
+        </div>
+      {{/each}}
+
+      {{#if noResults}}
+        <div class="md-empty" style="position:static;padding:20px;">
+          <div class="md-empty-hint">{{localize "MACRO_DASHBOARD.Library.Empty"}}</div>
+        </div>
+      {{/if}}
+    {{/if}}
+
+    {{#if isGroupsTab}}
+      <div class="md-empty" style="position:static;padding:30px 20px;">
+        <div class="md-empty-icon"><i class="fa-solid fa-folder"></i></div>
+        <div class="md-empty-hint">{{localize "MACRO_DASHBOARD.Library.GroupsComingSoon"}}</div>
+      </div>
+    {{/if}}
+
+  </div>
+
+</div>

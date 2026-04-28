@@ -1,0 +1,60 @@
+{
+  "MACRO_DASHBOARD.SceneControl.Title": "Macro Dashboard",
+  "MACRO_DASHBOARD.SceneControl.Tooltip": "Macro Dashboard ({key})",
+
+  "MACRO_DASHBOARD.Window.Dashboard.Title": "Macro Dashboard",
+  "MACRO_DASHBOARD.Window.Library.Title": "Macro Library",
+
+  "MACRO_DASHBOARD.Tab.New": "+ New Tab",
+  "MACRO_DASHBOARD.Tab.GlobalPill": "★ Global",
+  "MACRO_DASHBOARD.Tab.Close": "Close tab",
+  "MACRO_DASHBOARD.Tab.Rename": "Rename",
+  "MACRO_DASHBOARD.Tab.NewName": "New Dashboard",
+  "MACRO_DASHBOARD.Tab.ConfirmDelete.Title": "Delete Dashboard?",
+  "MACRO_DASHBOARD.Tab.ConfirmDelete.Content": "<p>Delete <strong>{name}</strong>? Tiles inside will be lost. This cannot be undone.</p>",
+
+  "MACRO_DASHBOARD.ModeBar.Viewing": "Viewing:",
+  "MACRO_DASHBOARD.ModeBar.AutoSwitch": "Auto-Switch",
+  "MACRO_DASHBOARD.ModeBar.Manual": "Manual",
+  "MACRO_DASHBOARD.ModeBar.SwitchToManual": "Switch to manual",
+  "MACRO_DASHBOARD.ModeBar.EnableAutoSwitch": "Enable auto-switch",
+  "MACRO_DASHBOARD.ModeBar.Override": "Override",
+  "MACRO_DASHBOARD.ModeBar.OverrideTooltip": "Active scene is {name}",
+  "MACRO_DASHBOARD.ModeBar.ActiveSceneSuffix": " (active scene)",
+
+  "MACRO_DASHBOARD.Toolbar.Rename": "Rename",
+  "MACRO_DASHBOARD.Toolbar.Duplicate": "Duplicate",
+  "MACRO_DASHBOARD.Toolbar.SaveAsGroup": "Save as preset group",
+  "MACRO_DASHBOARD.Toolbar.Settings": "Settings",
+  "MACRO_DASHBOARD.Toolbar.OnScene": "on",
+
+  "MACRO_DASHBOARD.Empty.NoDashboards.Title": "No Dashboards Yet",
+  "MACRO_DASHBOARD.Empty.NoDashboards.Hint": "This scene has no dashboards. Click the <strong>+</strong> tab above to add one, or create a global dashboard.",
+  "MACRO_DASHBOARD.Empty.NoTiles.Hint": "Drag macros from the <strong>Macro Library</strong> here. Right-click any tile to edit, duplicate, or delete it.",
+  "MACRO_DASHBOARD.Drop.Pill": "Drop to add",
+
+  "MACRO_DASHBOARD.Library.SearchPlaceholder": "Search macros...",
+  "MACRO_DASHBOARD.Library.Tab.Macros": "Macros",
+  "MACRO_DASHBOARD.Library.Tab.Groups": "Groups",
+  "MACRO_DASHBOARD.Library.AllMacros": "All Macros",
+  "MACRO_DASHBOARD.Library.Empty": "No macros found.",
+  "MACRO_DASHBOARD.Library.GroupsComingSoon": "Preset groups are coming in v0.2.",
+
+  "MACRO_DASHBOARD.Settings.AutoSwitch.Name": "Auto-switch with scene",
+  "MACRO_DASHBOARD.Settings.AutoSwitch.Hint": "When enabled, the dashboard automatically follows the currently viewed scene. When disabled, the GM can pick any scene from a dropdown.",
+  "MACRO_DASHBOARD.Settings.TileSize.Name": "Tile size",
+  "MACRO_DASHBOARD.Settings.TileSize.Hint": "Size of macro tiles on the dashboard canvas.",
+  "MACRO_DASHBOARD.Settings.TileSize.Small": "Small",
+  "MACRO_DASHBOARD.Settings.TileSize.Medium": "Medium",
+  "MACRO_DASHBOARD.Settings.TileSize.Large": "Large",
+  "MACRO_DASHBOARD.Settings.Layout.Name": "Layout",
+  "MACRO_DASHBOARD.Settings.Layout.Hint": "Free-grid (snap-positioned tiles) or columns (auto-binned by stripe color).",
+  "MACRO_DASHBOARD.Settings.Layout.Grid": "Free Grid",
+  "MACRO_DASHBOARD.Settings.Layout.Columns": "Columns (coming in v0.2)",
+
+  "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Name": "Toggle Macro Dashboard",
+  "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Name": "Toggle Macro Library",
+
+  "MACRO_DASHBOARD.Notification.NotGM": "Macro Dashboard is GM-only.",
+  "MACRO_DASHBOARD.Notification.MacroMissing": "Macro no longer exists. Right-click the tile to remove it."
+}

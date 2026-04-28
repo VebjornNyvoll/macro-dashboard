@@ -1,0 +1,97 @@
+{{!-- Macro Dashboard window template - mode bar, tabs, toolbar, canvas --}}
+<div class="md-body macro-dashboard">
+
+  {{!-- Mode bar --}}
+  <div class="md-modebar">
+    <span style="color:var(--fdry-fg-muted)">{{localize "MACRO_DASHBOARD.ModeBar.Viewing"}}</span>
+    {{#if modeBar.autoSwitch}}
+      <strong>{{modeBar.viewingSceneName}}</strong>
+    {{else}}
+      <select data-scene-select>
+        {{#each modeBar.scenes}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+    {{/if}}
+    <span class="auto-pill">
+      {{#if modeBar.autoSwitch}}{{localize "MACRO_DASHBOARD.ModeBar.AutoSwitch"}}{{else}}{{localize "MACRO_DASHBOARD.ModeBar.Manual"}}{{/if}}
+    </span>
+    {{#if modeBar.isOverriding}}
+      <span style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--fdry-warning);border:1px solid var(--fdry-warning);background:var(--fdry-warning-bg);padding:1px 6px;border-radius:2px;white-space:nowrap;flex:none;"
+            title="{{modeBar.overrideTooltip}}">
+        {{localize "MACRO_DASHBOARD.ModeBar.Override"}}
+      </span>
+    {{/if}}
+    <span class="toggle" data-action="toggleAutoSwitch">
+      {{#if modeBar.autoSwitch}}{{localize "MACRO_DASHBOARD.ModeBar.SwitchToManual"}}{{else}}{{localize "MACRO_DASHBOARD.ModeBar.EnableAutoSwitch"}}{{/if}}
+    </span>
+  </div>
+
+  {{!-- Tab strip --}}
+  <div class="md-tabs">
+    {{#each tabs}}
+      <div class="md-tab {{#if isActive}}active{{/if}}" data-tab-id="{{id}}" data-action="switchTab" title="{{name}}">
+        <span class="md-tab-icon"><i class="{{icon}}"></i></span>
+        <span class="md-tab-name">{{name}}</span>
+        {{#if (eq scope "global")}}
+          <span class="pill-global" title="Visible on every scene">{{localize "MACRO_DASHBOARD.Tab.GlobalPill"}}</span>
+        {{/if}}
+        <span class="md-tab-close" data-action="removeTab" title="{{localize "MACRO_DASHBOARD.Tab.Close"}}"><i class="fa-solid fa-times"></i></span>
+      </div>
+    {{/each}}
+    <button class="md-tab-add" data-action="addTab">{{localize "MACRO_DASHBOARD.Tab.New"}}</button>
+  </div>
+
+  {{!-- Toolbar --}}
+  {{#if activeTab}}
+    <div class="md-toolbar">
+      <div class="md-toolbar-name">
+        <span style="color:var(--fdry-accent-bright)"><i class="{{activeTab.icon}}"></i></span>
+        <span>{{activeTab.name}}</span>
+        {{#if (eq activeTab.scope "global")}}
+          <span class="pill-global">{{localize "MACRO_DASHBOARD.Tab.GlobalPill"}}</span>
+        {{/if}}
+        <span class="md-toolbar-scene">{{localize "MACRO_DASHBOARD.Toolbar.OnScene"}}<span class="scene-name">{{modeBar.viewingSceneName}}</span></span>
+      </div>
+      <div class="md-toolbar-actions">
+        <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.Rename"}}" data-action="renameTab" data-tab-id="{{activeTab.id}}"><i class="fa-solid fa-pen"></i></button>
+        <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.Duplicate"}}" disabled><i class="fa-solid fa-copy"></i></button>
+        <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.SaveAsGroup"}}" disabled><i class="fa-solid fa-bookmark"></i></button>
+      </div>
+    </div>
+  {{/if}}
+
+  {{!-- Canvas --}}
+  <div class="md-canvas" data-size="{{tileSize}}" data-layout="{{layout}}">
+    <div class="md-canvas-inner">
+
+      {{#if emptyDashboards}}
+        <div class="md-empty">
+          <div class="md-empty-icon"><i class="fa-solid fa-th"></i></div>
+          <div class="md-empty-title">{{localize "MACRO_DASHBOARD.Empty.NoDashboards.Title"}}</div>
+          <div class="md-empty-hint">{{{localize "MACRO_DASHBOARD.Empty.NoDashboards.Hint"}}}</div>
+        </div>
+      {{else if emptyTiles}}
+        <div class="md-empty">
+          <div class="md-empty-icon"><i class="fa-solid fa-th"></i></div>
+          <div class="md-empty-title">{{activeTab.name}}</div>
+          <div class="md-empty-hint">{{{localize "MACRO_DASHBOARD.Empty.NoTiles.Hint"}}}</div>
+        </div>
+      {{else}}
+        {{#each tiles}}
+          <div class="md-tile {{#if stripe}}has-stripe{{/if}}{{#if missing}} missing{{/if}}"
+               data-tile-id="{{id}}" data-macro-id="{{macroId}}"
+               data-action="executeTile"
+               draggable="true"
+               style="left: calc(12px + {{x}} * var(--md-cell)); top: calc(12px + {{y}} * var(--md-cell));{{#if stripe}} --tile-stripe: {{stripe}};{{/if}}"
+               title="{{name}}">
+            <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
+            <div class="md-tile-name">{{name}}</div>
+          </div>
+        {{/each}}
+      {{/if}}
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,283 @@
+/* ============================================================
+   Foundry Modules Design System — tokens
+   Colors, type, spacing, shadow, radius.
+   Map onto Foundry core CSS vars where they exist; otherwise fall
+   back to literal values. Scope module styles under a module class.
+   ============================================================ */
+
+/* Web fonts — local files in fonts/, with Google Fonts fallback */
+:root {
+  /* ----------  COLORS — neutrals (dark theme, default) ---------- */
+  --fdry-bg-deepest: #0e0e10;          /* outside the window */
+  --fdry-bg-window:  #1a1a1d;          /* window frame body */
+  --fdry-bg-panel:   #232328;          /* main panel surface */
+  --fdry-bg-panel-2: #2b2b31;          /* raised panel / hover */
+  --fdry-bg-panel-3: #34343b;          /* selected / pressed */
+  --fdry-bg-input:   #14141a;          /* form input base */
+
+  /* ---------- Parchment (light theme) ---------- */
+  --fdry-bg-parchment:    #f0e6d2;
+  --fdry-bg-parchment-2:  #e6dac0;
+  --fdry-bg-parchment-3:  #d8c8a4;
+  --fdry-ink-parchment:   #2a1f12;
+  --fdry-ink-parchment-2: #5a4a32;
+
+  /* ---------- Text (dark theme) ---------- */
+  --fdry-fg-primary:   #e8e3d8;        /* maps to --color-text-primary */
+  --fdry-fg-secondary: #b3ad9c;        /* --color-text-secondary */
+  --fdry-fg-muted:     #7a7464;
+  --fdry-fg-emphatic:  #f8efd8;        /* --color-text-emphatic (headers) */
+  --fdry-fg-disabled:  #555049;
+  --fdry-fg-link:      #d4a553;
+  --fdry-fg-link-hover:#f0c97a;
+
+  /* ---------- Borders & rules (gold/bronze metalwork) ---------- */
+  --fdry-rule-gold:        #a88b3a;
+  --fdry-rule-gold-bright: #d4af56;
+  --fdry-rule-bronze:      #7a5a2c;
+  --fdry-rule-bronze-dark: #4a3618;
+  --fdry-border-light:     #3a3a42;    /* --color-border-light-1 */
+  --fdry-border-dark:      #0c0c0f;
+  --fdry-border-input:     #1c1c22;
+
+  /* ---------- Accents — one per module ---------- */
+  --fdry-accent-crimson: #8b1d1d;
+  --fdry-accent-crimson-bright: #c54141;
+  --fdry-accent-gold:    #c79a3a;
+  --fdry-accent-gold-bright: #f1c560;
+  --fdry-accent-teal:    #1f6f6a;
+  --fdry-accent-teal-bright: #4cb0a8;
+  --fdry-accent-violet:  #5a2c7a;
+  --fdry-accent-violet-bright: #9a5fc8;
+
+  /* The "current" accent — modules override this to retheme */
+  --fdry-accent:        var(--fdry-accent-gold);
+  --fdry-accent-bright: var(--fdry-accent-gold-bright);
+
+  /* ---------- Semantic ---------- */
+  --fdry-success:   #4a7a3c;
+  --fdry-success-bg:#1f2e1c;
+  --fdry-warning:   #b08038;
+  --fdry-warning-bg:#2e2418;
+  --fdry-danger:    #a23a3a;
+  --fdry-danger-bg: #2e1818;
+  --fdry-info:      #3a7aa8;
+  --fdry-info-bg:   #182430;
+
+  /* ---------- Shadows (warm-toned) ---------- */
+  --fdry-shadow-window: 0 8px 32px rgba(15, 8, 0, 0.55), 0 2px 6px rgba(15, 8, 0, 0.4);
+  --fdry-shadow-card:   0 2px 8px rgba(15, 8, 0, 0.45);
+  --fdry-shadow-popup:  0 12px 40px rgba(15, 8, 0, 0.65);
+  --fdry-shadow-inset:  inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  --fdry-shadow-emboss: inset 0 1px 0 rgba(255, 220, 160, 0.06),
+                        inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  --fdry-shadow-press:  inset 0 1px 0 rgba(0, 0, 0, 0.5);
+
+  /* Focus ring */
+  --fdry-focus-ring: 0 0 0 2px color-mix(in srgb, var(--fdry-accent-bright) 70%, transparent);
+
+  /* ---------- Radius ---------- */
+  --fdry-radius-window: 8px;
+  --fdry-radius-panel:  6px;
+  --fdry-radius-card:   5px;
+  --fdry-radius-input:  4px;
+  --fdry-radius-button: 3px;
+  --fdry-radius-chip:   3px;
+
+  /* ---------- Spacing ---------- */
+  --fdry-space-0:  0;
+  --fdry-space-1:  2px;
+  --fdry-space-2:  4px;
+  --fdry-space-3:  6px;
+  --fdry-space-4:  8px;
+  --fdry-space-5:  12px;
+  --fdry-space-6:  16px;
+  --fdry-space-7:  20px;
+  --fdry-space-8:  24px;
+  --fdry-space-9:  32px;
+  --fdry-space-10: 48px;
+
+  /* Form-group geometry */
+  --fdry-formgroup-label-width: 130px;
+  --fdry-formgroup-row-min:     32px;     /* touch-target floor */
+
+  /* ---------- Typography ---------- */
+  --fdry-font-sans:    "Signika", ui-sans-serif, "Segoe UI", Roboto, Arial, sans-serif;
+  --fdry-font-display: "Cinzel", "Modesto Condensed", "Cormorant Garamond", Georgia, serif;
+  --fdry-font-mono:    "JetBrains Mono", "IBM Plex Mono", "Fira Code", ui-monospace, monospace;
+
+  /* Weights */
+  --fdry-weight-regular:  400;
+  --fdry-weight-semibold: 600;
+  --fdry-weight-bold:     700;
+
+  /* Sizes */
+  --fdry-size-xs:   11px;     /* tags, micro */
+  --fdry-size-sm:   12px;     /* hint text */
+  --fdry-size-body: 13px;     /* body floor */
+  --fdry-size-md:   14px;     /* default UI */
+  --fdry-size-lg:   16px;     /* window title */
+  --fdry-size-xl:   20px;     /* section header */
+  --fdry-size-2xl:  26px;     /* sheet hero name */
+  --fdry-size-3xl:  36px;     /* dice total */
+
+  /* Line heights */
+  --fdry-lh-tight:  1.15;
+  --fdry-lh-normal: 1.4;
+  --fdry-lh-prose:  1.55;
+
+  /* Letter spacing */
+  --fdry-ls-display: 0.04em;
+  --fdry-ls-tag:     0.06em;
+}
+
+/* Map our tokens onto Foundry's official CSS variables where they exist,
+   so module CSS can speak either dialect. */
+:root {
+  --color-text-primary:   var(--fdry-fg-primary);
+  --color-text-secondary: var(--fdry-fg-secondary);
+  --color-text-emphatic:  var(--fdry-fg-emphatic);
+  --color-bg:             var(--fdry-bg-window);
+  --color-border-light-1: var(--fdry-border-light);
+  --color-shadow-primary: rgba(15, 8, 0, 0.55);
+  --color-warm-1:         var(--fdry-rule-gold);
+}
+
+/* ============================================================
+   Semantic element styles
+   Use under a module-scoped class (e.g. .my-module h1, .my-module p)
+   in production. Here we set them globally for the design system.
+   ============================================================ */
+
+body {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-md);
+  line-height: var(--fdry-lh-normal);
+  color: var(--fdry-fg-primary);
+  background: var(--fdry-bg-deepest);
+  font-weight: var(--fdry-weight-regular);
+}
+
+h1, .fdry-h1 {
+  font-family: var(--fdry-font-display);
+  font-size: var(--fdry-size-2xl);
+  font-weight: var(--fdry-weight-bold);
+  line-height: var(--fdry-lh-tight);
+  letter-spacing: var(--fdry-ls-display);
+  color: var(--fdry-fg-emphatic);
+  margin: 0;
+}
+
+h2, .fdry-h2 {
+  font-family: var(--fdry-font-display);
+  font-size: var(--fdry-size-xl);
+  font-weight: var(--fdry-weight-bold);
+  line-height: var(--fdry-lh-tight);
+  letter-spacing: var(--fdry-ls-display);
+  color: var(--fdry-fg-emphatic);
+  margin: 0;
+}
+
+h3, .fdry-h3 {
+  font-family: var(--fdry-font-display);
+  font-size: var(--fdry-size-lg);
+  font-weight: var(--fdry-weight-bold);
+  line-height: var(--fdry-lh-tight);
+  letter-spacing: var(--fdry-ls-display);
+  color: var(--fdry-fg-emphatic);
+  margin: 0;
+  text-transform: none;
+}
+
+h4, .fdry-h4 {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-md);
+  font-weight: var(--fdry-weight-semibold);
+  line-height: var(--fdry-lh-tight);
+  color: var(--fdry-fg-primary);
+  margin: 0;
+}
+
+p, .fdry-body {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-md);
+  line-height: var(--fdry-lh-prose);
+  color: var(--fdry-fg-primary);
+  margin: 0;
+}
+
+.fdry-hint {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-sm);
+  font-style: italic;
+  color: var(--fdry-fg-muted);
+  line-height: var(--fdry-lh-normal);
+}
+
+.fdry-label {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-md);
+  font-weight: var(--fdry-weight-semibold);
+  color: var(--fdry-fg-primary);
+}
+
+.fdry-tag, .fdry-eyebrow {
+  font-family: var(--fdry-font-sans);
+  font-size: var(--fdry-size-xs);
+  font-weight: var(--fdry-weight-semibold);
+  letter-spacing: var(--fdry-ls-tag);
+  text-transform: uppercase;
+  color: var(--fdry-fg-secondary);
+}
+
+code, .fdry-code, .fdry-mono {
+  font-family: var(--fdry-font-mono);
+  font-size: var(--fdry-size-body);
+  color: var(--fdry-fg-primary);
+}
+
+.fdry-dice {
+  font-family: var(--fdry-font-mono);
+  font-size: var(--fdry-size-md);
+  font-weight: var(--fdry-weight-regular);
+  color: var(--fdry-fg-emphatic);
+  letter-spacing: 0.02em;
+}
+
+.fdry-dice-total {
+  font-family: var(--fdry-font-display);
+  font-size: var(--fdry-size-3xl);
+  font-weight: var(--fdry-weight-bold);
+  color: var(--fdry-fg-emphatic);
+  line-height: 1;
+}
+
+.fdry-window-title {
+  font-family: var(--fdry-font-display);
+  font-size: var(--fdry-size-lg);
+  font-weight: var(--fdry-weight-bold);
+  letter-spacing: var(--fdry-ls-display);
+  color: var(--fdry-fg-emphatic);
+}
+
+a {
+  color: var(--fdry-fg-link);
+  text-decoration: none;
+  transition: color 80ms ease;
+}
+a:hover { color: var(--fdry-fg-link-hover); }
+
+/* ============================================================
+   Parchment theme override — apply .fdry-parchment to a container
+   ============================================================ */
+.fdry-parchment {
+  --fdry-bg-window:  var(--fdry-bg-parchment);
+  --fdry-bg-panel:   var(--fdry-bg-parchment-2);
+  --fdry-bg-panel-2: var(--fdry-bg-parchment-3);
+  --fdry-bg-input:   #fbf5e6;
+  --fdry-fg-primary: var(--fdry-ink-parchment);
+  --fdry-fg-secondary: var(--fdry-ink-parchment-2);
+  --fdry-fg-emphatic: #1a0f04;
+  --fdry-fg-muted:  #8a7858;
+  --fdry-border-light: #c8b893;
+}
