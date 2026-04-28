@@ -30,7 +30,7 @@
   {{!-- Tab strip --}}
   <div class="md-tabs">
     {{#each tabs}}
-      <div class="md-tab {{#if isActive}}active{{/if}}" data-tab-id="{{id}}" data-action="switchTab" title="{{name}}">
+      <div class="md-tab {{#if isActive}}active{{/if}}" data-tab-id="{{id}}" data-tab-scope="{{scope}}" data-action="switchTab" draggable="true" title="{{name}}">
         <span class="md-tab-icon"><i class="{{icon}}"></i></span>
         <span class="md-tab-name">{{name}}</span>
         {{#if isGlobal}}
@@ -90,7 +90,7 @@
                    {{#if stripe}}style="--tile-stripe: {{stripe}};"{{/if}}
                    title="{{name}}">
                 <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
-                <div class="md-tile-name">{{name}}</div>
+                <div class="md-tile-name">{{name}}</div>{{#if hotkey}}<span class="md-tile-kbd">{{hotkey}}</span>{{/if}}
               </div>
             {{/each}}
           </div>
@@ -104,7 +104,7 @@
                style="left: calc(12px + {{x}} * var(--md-cell)); top: calc(12px + {{y}} * var(--md-cell));{{#if stripe}} --tile-stripe: {{stripe}};{{/if}}"
                title="{{name}}">
             <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
-            <div class="md-tile-name">{{name}}</div>
+            <div class="md-tile-name">{{name}}</div>{{#if hotkey}}<span class="md-tile-kbd">{{hotkey}}</span>{{/if}}
           </div>
         {{/each}}
       {{/if}}

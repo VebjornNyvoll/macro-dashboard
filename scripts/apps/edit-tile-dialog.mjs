@@ -91,6 +91,12 @@ export class EditTileDialog {
           </div>
 
           <div class="form-group">
+            <label>${game.i18n.localize("MACRO_DASHBOARD.EditDialog.Hotkey")}</label>
+            <input type="text" name="hotkey" value="${escAttr(tile.hotkey ?? "")}" placeholder="Shift+1, Ctrl+A, KeyZ"/>
+            <p class="hint">${game.i18n.localize("MACRO_DASHBOARD.EditDialog.HotkeyHint")}</p>
+          </div>
+
+          <div class="form-group">
             <label>${game.i18n.localize("MACRO_DASHBOARD.EditDialog.Command")}</label>
             <textarea name="command" rows="6">${escHtml(macro.command ?? "")}</textarea>
             <p class="hint">${game.i18n.localize("MACRO_DASHBOARD.EditDialog.CommandHint")}</p>
@@ -118,7 +124,8 @@ export class EditTileDialog {
             img:         fd.img,
             command:     fd.command,
             description: fd.description,
-            stripe:      fd.stripe || null
+            stripe:      fd.stripe || null,
+            hotkey:      (fd.hotkey || "").trim() || null
           };
         }
       },

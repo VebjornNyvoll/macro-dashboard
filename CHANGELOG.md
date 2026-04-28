@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-04-28
+
+### Added
+
+- **Multi-system shim seam** — `game.macroDashboard.API.addSystemIntegration(shim, version?)` lets companion modules register per-system data. Shim shape is the small contract `{ VERSION, CATEGORIES, DEFAULT_PRESET_GROUPS }`. Validation throws descriptive errors for missing required keys. Pattern follows the Item Piles model documented in [`cross-system-architecture.md`](file:///C:/Users/user/.claude/skills/foundry-vtt-module/references/cross-system-architecture.md). Companion modules call from `Hooks.once("macro-dashboard-ready", ...)`.
+- **Built-in D&D 5e shim** — when `game.system.id === "dnd5e"`, the module auto-registers `systems/dnd5e.js` providing six default categories (Combat, Rest, Spells, Conditions, Loot, Information) with appropriate FontAwesome icons. Future systems can be added by appending to the `BUILTIN_SHIMS` registry in `scripts/systems.js`.
+- **`API.applySystemDefaultGroups()`** — idempotent helper to seed the world with `DEFAULT_PRESET_GROUPS` from the active shim, resolving macro names against `game.macros.getName(...)`. Skips if any groups already exist.
+- **Drag-to-reorder tabs** — drag a dashboard tab horizontally to reorder within its scope. Globals reorder among globals; scene tabs among scene tabs. Cross-scope drops are rejected. Reorder persists in the world setting.
+- **Per-tile hotkeys** — assign a key combo (e.g. `Shift+1`, `Ctrl+A`, `KeyZ`) in the Edit Macro dialog's new Hotkey field. Pressing the combo (with no input/textarea focused) executes the tile's macro using the currently controlled token's actor. The hotkey renders as a small monospace `kbd` badge in the tile's bottom-right corner. Combos are layout-independent (uses `event.code`).
+- `Hooks.callAll("macro-dashboard-ready", API)` — fired during the `ready` hook after the API is exposed and built-in shims are registered.
+
+### Files
+
+- New: [`scripts/systems.js`](scripts/systems.js) — SYSTEMS resolver + API class + version-pinned shim resolution.
+- New: [`systems/dnd5e.js`](systems/dnd5e.js) — first-party shim.
+- Updated: `module.mjs` (expose `SYSTEMS` + `API` on `game.macroDashboard`, register builtin shims, document keydown listener for tile hotkeys).
+- Updated: `dashboard-app.mjs` (tab drag-reorder, propagate hotkey through Edit dialog, render kbd badge).
+- Updated: `edit-tile-dialog.mjs` (Hotkey field).
+- Updated: `dashboard.hbs` (`draggable="true"` on tabs, kbd badge on tiles).
+- Updated: `macro-dashboard.css` (`.md-tile-kbd`, `.md-tab.dragging`, `.md-tab.drag-over`).
+
+### Notes
+
+All v0.1, v0.2, and v0.3 roadmap items are now shipped. The original design handoff README's spec is fully implemented.
+
 ## [0.2.0] - 2026-04-28
 
 ### Added

@@ -4,6 +4,7 @@
 
 import { MacroDashboardApp } from "./apps/dashboard-app.mjs";
 import { MacroLibraryApp }   from "./apps/library-app.mjs";
+import { SYSTEMS, API, registerBuiltinShims } from "./systems.js";
 
 export const MODULE_ID = "macro-dashboard";
 
@@ -196,15 +197,84 @@ Hooks.once("init", () => {
   registerKeybindings();
 });
 
+// ---------------------------------------------------------------------------
+// Per-tile hotkey listener helpers
+
+function _comboFromEvent(ev) {
+  if (!ev.key || ev.key.length === 0) return null;
+  if (["Control", "Shift", "Alt", "Meta", "OS"].includes(ev.key)) return null;
+  const parts = [];
+  if (ev.ctrlKey)  parts.push("Ctrl");
+  if (ev.altKey)   parts.push("Alt");
+  if (ev.shiftKey) parts.push("Shift");
+  parts.push(ev.code);
+  return parts.join("+");
+}
+
+function _normalizeCombo(s) {
+  if (!s) return "";
+  return s.split("+").map(p => p.trim()).filter(Boolean).map(p => {
+    const k = p.toLowerCase();
+    if (k === "ctrl" || k === "control") return "Ctrl";
+    if (k === "shift")                   return "Shift";
+    if (k === "alt")                     return "Alt";
+    if (k === "meta" || k === "cmd")     return "Meta";
+    if (/^[a-zA-Z]$/.test(p)) return "Key" + p.toUpperCase();
+    if (/^[0-9]$/.test(p))    return "Digit" + p;
+    return p;
+  }).join("+");
+}
+
+function _onTileHotkey(ev) {
+  if (!game.user?.isGM) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+
+  const combo = _comboFromEvent(ev);
+  if (!combo) return;
+
+  const data = State.read();
+  const activeSceneId = game.scenes.active?.id;
+  const candidates = [
+    ...(data.global ?? []),
+    ...(data[activeSceneId] ?? [])
+  ];
+  for (const dash of candidates) {
+    for (const tile of (dash.tiles ?? [])) {
+      if (!tile.hotkey) continue;
+      if (_normalizeCombo(tile.hotkey) === combo) {
+        ev.preventDefault();
+        const macro = game.macros.get(tile.macroId);
+        const token = canvas.tokens.controlled[0];
+        macro?.execute({ actor: token?.actor, token });
+        return;
+      }
+    }
+  }
+}
+
 Hooks.once("ready", () => {
   // Public API
   game.macroDashboard = {
     open:        () => MacroDashboardApp.toggle(),
     openLibrary: () => MacroLibraryApp.toggle(),
     State,
+    SYSTEMS,
+    API,
     MacroDashboardApp,
     MacroLibraryApp
   };
+
+  // Auto-register first-party system shims (e.g. dnd5e)
+  registerBuiltinShims();
+
+  // Notify companion modules that the API is ready for addSystemIntegration calls
+  Hooks.callAll("macro-dashboard-ready", API);
+
+  // Per-tile hotkey listener (GM only - skip when typing in input fields)
+  if (game.user?.isGM) {
+    document.addEventListener("keydown", _onTileHotkey);
+  }
 });
 
 // Scene-controls left-rail tool button (GM only)

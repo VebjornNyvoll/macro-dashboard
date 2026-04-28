@@ -856,4 +856,28 @@
 .md-group .md-group-action:hover { background: var(--fdry-bg-panel-3); color: var(--fdry-accent-bright); }
 .md-group .md-group-action.danger:hover { background: rgba(165,40,40,0.18); color: var(--fdry-accent-crimson-bright); }
 
+/* ============ Tile hotkey badge ============ */
+.md-tile-kbd {
+  position: absolute;
+  bottom: 2px; right: 2px;
+  font-family: var(--fdry-font-mono);
+  font-size: 9px;
+  background: var(--fdry-bg-deepest);
+  border: 1px solid var(--fdry-border-light);
+  border-radius: 2px;
+  padding: 0 3px;
+  color: var(--fdry-fg-muted);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+/* ============ Tab drag-reorder visual feedback ============ */
+.md-tab.dragging { opacity: 0.5; }
+.md-tab.drag-over {
+  border-color: var(--fdry-rule-gold-bright) !important;
+  background: rgba(199,154,58,0.12);
+  outline: 1px dashed var(--fdry-rule-gold-bright);
+  outline-offset: -1px;
+}
+
 }

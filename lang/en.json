@@ -77,6 +77,8 @@
   "MACRO_DASHBOARD.EditDialog.Description": "Description",
   "MACRO_DASHBOARD.EditDialog.DescriptionHint": "Shown in the tooltip on hover.",
   "MACRO_DASHBOARD.EditDialog.Stripe": "Color Stripe",
+  "MACRO_DASHBOARD.EditDialog.Hotkey": "Hotkey",
+  "MACRO_DASHBOARD.EditDialog.HotkeyHint": "Optional. Examples: \"Shift+1\", \"Ctrl+A\", \"KeyZ\". Pressed when no input is focused. Layout-independent (KeyA, Digit1).",
   "MACRO_DASHBOARD.EditDialog.Command": "Command",
   "MACRO_DASHBOARD.EditDialog.CommandHint": "Foundry script run when this tile is clicked. Available: token, actor, scene, game.",
   "MACRO_DASHBOARD.EditDialog.Save": "Save Changes",

@@ -108,7 +108,8 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
         stripe:   t.stripe ?? null,
         name:     macro?.name ?? "(missing)",
         img:      macro?.img ?? "icons/svg/hazard.svg",
-        missing:  !macro
+        missing:  !macro,
+        hotkey:   t.hotkey ?? null
       };
     });
 
@@ -202,11 +203,41 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       });
     }
 
-    // Inline tab rename via dblclick
+    // Tab interactions: rename via dblclick + drag-to-reorder within scope
     for (const tab of root.querySelectorAll(".md-tab[data-tab-id]")) {
       tab.addEventListener("dblclick", (ev) => {
         if (ev.target.closest(".md-tab-close")) return;
         this.#startInlineRename(tab.dataset.tabId, tab);
+      });
+      tab.addEventListener("dragstart", (ev) => {
+        ev.stopPropagation();
+        ev.dataTransfer.setData("application/json", JSON.stringify({
+          type: "tab", tabId: tab.dataset.tabId, scope: tab.dataset.tabScope
+        }));
+        ev.dataTransfer.effectAllowed = "move";
+        tab.classList.add("dragging");
+      });
+      tab.addEventListener("dragend", () => tab.classList.remove("dragging"));
+      tab.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "move";
+        tab.classList.add("drag-over");
+      });
+      tab.addEventListener("dragleave", (ev) => {
+        if (tab.contains(ev.relatedTarget)) return;
+        tab.classList.remove("drag-over");
+      });
+      tab.addEventListener("drop", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        tab.classList.remove("drag-over");
+        let payload;
+        try { payload = JSON.parse(ev.dataTransfer.getData("application/json")); }
+        catch { return; }
+        if (payload.type !== "tab") return;
+        if (payload.scope !== tab.dataset.tabScope) return;
+        if (payload.tabId === tab.dataset.tabId) return;
+        await this.#reorderTab(payload.tabId, tab.dataset.tabId, payload.scope);
       });
     }
   }
@@ -381,6 +412,21 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     });
   }
 
+  async #reorderTab(srcId, dstId, scope) {
+    const ctx = await this._prepareContext();
+    const data = State.read();
+    const key = scope === "global" ? "global" : ctx.viewingSceneId;
+    const arr = data[key];
+    if (!Array.isArray(arr)) return;
+    const srcIdx = arr.findIndex(d => d.id === srcId);
+    const dstIdx = arr.findIndex(d => d.id === dstId);
+    if (srcIdx < 0 || dstIdx < 0) return;
+    const [moved] = arr.splice(srcIdx, 1);
+    arr.splice(dstIdx, 0, moved);
+    await State.write(data);
+    this.render();
+  }
+
   static async #onToggleAutoSwitch() {
     const cur = game.settings.get(MODULE_ID, "autoSwitch");
     await game.settings.set(MODULE_ID, "autoSwitch", !cur);
@@ -436,7 +482,7 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     }
     await State.update(found.dashboardId, d => ({
       ...d,
-      tiles: d.tiles.map(t => t.id === tileId ? { ...t, stripe: result.stripe || null } : t)
+      tiles: d.tiles.map(t => t.id === tileId ? { ...t, stripe: result.stripe || null, hotkey: (result.hotkey || "").trim() || null } : t)
     }));
     this.render();
   }
