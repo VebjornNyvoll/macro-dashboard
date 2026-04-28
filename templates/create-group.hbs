@@ -1,0 +1,62 @@
+{{!-- Create / Edit Preset Group dialog template --}}
+<div class="md-group-dialog macro-dashboard">
+
+  <div class="md-edit-form">
+    <div class="form-group">
+      <label>{{localize "MACRO_DASHBOARD.GroupDialog.Name"}}</label>
+      <input type="text" name="name" value="{{name}}"
+             placeholder="{{localize "MACRO_DASHBOARD.GroupDialog.NamePlaceholder"}}"
+             autofocus/>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "MACRO_DASHBOARD.GroupDialog.Icon"}}</label>
+      <input type="text" name="icon" value="{{icon}}"/>
+      <p class="hint">{{localize "MACRO_DASHBOARD.GroupDialog.IconHint"}}</p>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "MACRO_DASHBOARD.GroupDialog.Color"}}</label>
+      <div class="md-stripe-picker">
+        {{#each colors}}
+          <button type="button"
+                  class="md-stripe-swatch{{#if active}} active{{/if}}"
+                  style="background:{{value}};{{#if active}}outline:2px solid var(--fdry-rule-gold-bright);outline-offset:1px;{{/if}}"
+                  title="{{value}}"
+                  data-action="pickColor"
+                  data-color="{{value}}"></button>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>
+        {{localize "MACRO_DASHBOARD.GroupDialog.Macros"}}
+        <span style="float:right;color:var(--fdry-fg-muted);font-weight:400;">{{selectedLabel}}</span>
+      </label>
+      <div class="md-group-picker">
+        {{#each macros}}
+          <div class="row{{#if selected}} selected{{/if}}"
+               data-action="toggleMacro"
+               data-macro-id="{{id}}"
+               title="{{name}}">
+            <img src="{{img}}" alt=""/>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{name}}</span>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+
+    <div style="display:flex; gap:6px; justify-content:flex-end; margin-top:14px; padding: 6px 0 0;">
+      <button type="button" data-action="cancel" class="md-icon-btn"
+              style="width:auto;padding:0 14px;height:30px;font-family:var(--fdry-font-sans);font-size:12px;font-weight:600;">
+        {{localize "MACRO_DASHBOARD.EditDialog.Cancel"}}
+      </button>
+      <button type="submit"
+              style="background:var(--fdry-rule-gold);color:#1a1a1d;border:1px solid var(--fdry-rule-gold-bright);border-radius:3px;padding:0 16px;height:30px;font-family:var(--fdry-font-sans);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.04em;">
+        <i class="fa-solid fa-floppy-disk"></i> {{submitLabel}}
+      </button>
+    </div>
+  </div>
+
+</div>

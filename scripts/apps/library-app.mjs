@@ -1,6 +1,9 @@
-// Macro Library window - searchable list of all game.macros, draggable rows.
+// Macro Library window (v0.2) - searchable list, draggable rows, Groups tab
+// with collapsible cards (each draggable as a unit), "Create new group from
+// selection..." trigger.
 
-import { MODULE_ID } from "../module.mjs";
+import { MODULE_ID, State }   from "../module.mjs";
+import { CreateGroupDialog }  from "./create-group-dialog.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -8,7 +11,7 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id:      "macro-library-app",
-    classes: ["macro-dashboard"],   // share design tokens via the same scope class
+    classes: ["macro-dashboard"],
     tag:     "div",
     window: {
       title:       "MACRO_DASHBOARD.Window.Library.Title",
@@ -16,17 +19,18 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       resizable:   true,
       minimizable: true
     },
-    position: { width: 300, height: 560 },
+    position: { width: 320, height: 560 },
     actions: {
-      switchLibTab: MacroLibraryApp.#onSwitchTab
+      switchLibTab: MacroLibraryApp.#onSwitchTab,
+      createGroup:  MacroLibraryApp.#onCreateGroup,
+      toggleGroup:  MacroLibraryApp.#onToggleGroup,
+      editGroup:    MacroLibraryApp.#onEditGroup,
+      deleteGroup:  MacroLibraryApp.#onDeleteGroup
     }
   };
 
   static PARTS = {
-    main: {
-      template:   `modules/${MODULE_ID}/templates/library.hbs`,
-      scrollable: [".md-lib-body"]
-    }
+    main: { template: `modules/${MODULE_ID}/templates/library.hbs`, scrollable: [".md-lib-body"] }
   };
 
   static #_instance = null;
@@ -42,11 +46,13 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   // Per-instance UI state
-  searchTerm = "";
-  activeLibTab = "macros";    // "macros" | "groups"
+  searchTerm     = "";
+  activeLibTab   = "macros";   // "macros" | "groups"
+  expandedGroups = new Set();
 
   async _prepareContext() {
     const term = this.searchTerm.toLowerCase().trim();
+
     const macros = game.macros.contents
       .filter(m => !term || m.name.toLowerCase().includes(term))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -54,8 +60,19 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         id:   m.id,
         name: m.name,
         img:  m.img || "icons/svg/dice-target.svg",
-        type: m.type,
         cmd:  (m.command ?? "").slice(0, 80)
+      }));
+
+    const groups = State.readGroups()
+      .filter(g => !term || g.name.toLowerCase().includes(term))
+      .map(g => ({
+        ...g,
+        expanded:   this.expandedGroups.has(g.id),
+        countLabel: game.i18n.format("MACRO_DASHBOARD.Library.GroupCount", { n: g.macros.length }),
+        macroDetails: g.macros.map(mid => {
+          const m = game.macros.get(mid);
+          return { id: mid, name: m?.name ?? "(missing)", img: m?.img ?? "icons/svg/hazard.svg", missing: !m };
+        })
       }));
 
     return {
@@ -64,21 +81,23 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isGroupsTab:  this.activeLibTab === "groups",
       macros,
       macroCount:   macros.length,
+      groups,
+      groupCount:   groups.length,
       term:         this.searchTerm,
-      noResults:    term.length > 0 && macros.length === 0
+      noResults:    term.length > 0 && this.activeLibTab === "macros" && macros.length === 0,
+      noGroups:     this.activeLibTab === "groups" && groups.length === 0
     };
   }
 
   _onRender(context, options) {
     const root = this.element;
 
-    // Search input
+    // Search input - re-focus after re-render (which destroys and recreates the input)
     const search = root.querySelector("input.md-lib-search-input");
     if (search) {
       search.addEventListener("input", (ev) => {
         this.searchTerm = ev.target.value;
-        this.render({ parts: ["main"] });
-        // Re-focus and restore caret position
+        this.render();
         requestAnimationFrame(() => {
           const el = this.element.querySelector("input.md-lib-search-input");
           if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
@@ -86,7 +105,7 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    // Drag handlers on macro rows
+    // Drag from macro rows (Macros tab + nested rows in expanded groups)
     for (const row of root.querySelectorAll(".md-lib-row[data-macro-id]")) {
       row.addEventListener("dragstart", (ev) => {
         const macroId = row.dataset.macroId;
@@ -96,10 +115,59 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       row.addEventListener("dragend", () => row.classList.remove("dragging"));
     }
+
+    // Drag from group header (drops the entire group as a batch)
+    for (const head of root.querySelectorAll(".md-group-head[data-group-id]")) {
+      head.addEventListener("dragstart", (ev) => {
+        const groupId = head.dataset.groupId;
+        ev.dataTransfer.setData("application/json", JSON.stringify({ type: "group", groupId }));
+        ev.dataTransfer.effectAllowed = "copy";
+        head.classList.add("dragging");
+      });
+      head.addEventListener("dragend", () => head.classList.remove("dragging"));
+    }
   }
 
   static #onSwitchTab(event, target) {
     this.activeLibTab = target.dataset.libTab;
+    this.render();
+  }
+
+  static async #onCreateGroup() {
+    await CreateGroupDialog.open();
+    this.render();
+  }
+
+  static #onToggleGroup(event, target) {
+    const gid = target.closest("[data-group-id]")?.dataset.groupId;
+    if (!gid) return;
+    if (this.expandedGroups.has(gid)) this.expandedGroups.delete(gid);
+    else this.expandedGroups.add(gid);
+    this.render();
+  }
+
+  static async #onEditGroup(event, target) {
+    event.stopPropagation();
+    const gid = target.closest("[data-group-id]")?.dataset.groupId;
+    if (!gid) return;
+    await CreateGroupDialog.open({ existingGroupId: gid });
+    this.render();
+  }
+
+  static async #onDeleteGroup(event, target) {
+    event.stopPropagation();
+    const gid = target.closest("[data-group-id]")?.dataset.groupId;
+    if (!gid) return;
+    const group = State.readGroups().find(g => g.id === gid);
+    if (!group) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window:      { title: "Delete Group?" },
+      content:     `<p>Delete preset group <strong>${group.name}</strong>? Macros in your library are unaffected.</p>`,
+      rejectClose: false
+    });
+    if (!confirmed) return;
+    await State.destroyGroup(gid);
+    ui.notifications.info(game.i18n.format("MACRO_DASHBOARD.Notification.GroupDeleted", { name: group.name }));
     this.render();
   }
 }

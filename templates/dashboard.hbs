@@ -1,4 +1,4 @@
-{{!-- Macro Dashboard window template - mode bar, tabs, toolbar, canvas --}}
+{{!-- Macro Dashboard window template (v0.2): mode bar, tabs, toolbar, canvas with grid OR columns layout --}}
 <div class="md-body macro-dashboard">
 
   {{!-- Mode bar --}}
@@ -33,7 +33,7 @@
       <div class="md-tab {{#if isActive}}active{{/if}}" data-tab-id="{{id}}" data-action="switchTab" title="{{name}}">
         <span class="md-tab-icon"><i class="{{icon}}"></i></span>
         <span class="md-tab-name">{{name}}</span>
-        {{#if (eq scope "global")}}
+        {{#if isGlobal}}
           <span class="pill-global" title="Visible on every scene">{{localize "MACRO_DASHBOARD.Tab.GlobalPill"}}</span>
         {{/if}}
         <span class="md-tab-close" data-action="removeTab" title="{{localize "MACRO_DASHBOARD.Tab.Close"}}"><i class="fa-solid fa-times"></i></span>
@@ -48,15 +48,13 @@
       <div class="md-toolbar-name">
         <span style="color:var(--fdry-accent-bright)"><i class="{{activeTab.icon}}"></i></span>
         <span>{{activeTab.name}}</span>
-        {{#if (eq activeTab.scope "global")}}
+        {{#if activeTab.isGlobal}}
           <span class="pill-global">{{localize "MACRO_DASHBOARD.Tab.GlobalPill"}}</span>
         {{/if}}
         <span class="md-toolbar-scene">{{localize "MACRO_DASHBOARD.Toolbar.OnScene"}}<span class="scene-name">{{modeBar.viewingSceneName}}</span></span>
       </div>
       <div class="md-toolbar-actions">
         <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.Rename"}}" data-action="renameTab" data-tab-id="{{activeTab.id}}"><i class="fa-solid fa-pen"></i></button>
-        <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.Duplicate"}}" disabled><i class="fa-solid fa-copy"></i></button>
-        <button class="md-icon-btn" title="{{localize "MACRO_DASHBOARD.Toolbar.SaveAsGroup"}}" disabled><i class="fa-solid fa-bookmark"></i></button>
       </div>
     </div>
   {{/if}}
@@ -77,6 +75,26 @@
           <div class="md-empty-title">{{activeTab.name}}</div>
           <div class="md-empty-hint">{{{localize "MACRO_DASHBOARD.Empty.NoTiles.Hint"}}}</div>
         </div>
+      {{else if isColumns}}
+        {{#each columns}}
+          <div class="md-column" data-stripe="{{stripe}}">
+            <div class="md-column-head">
+              <span>{{name}}</span>
+              <span class="md-group-count">{{tiles.length}}</span>
+            </div>
+            {{#each tiles}}
+              <div class="md-tile {{#if stripe}}has-stripe{{/if}}{{#if missing}} missing{{/if}}"
+                   data-tile-id="{{id}}" data-macro-id="{{macroId}}"
+                   data-action="executeTile"
+                   draggable="true"
+                   {{#if stripe}}style="--tile-stripe: {{stripe}};"{{/if}}
+                   title="{{name}}">
+                <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
+                <div class="md-tile-name">{{name}}</div>
+              </div>
+            {{/each}}
+          </div>
+        {{/each}}
       {{else}}
         {{#each tiles}}
           <div class="md-tile {{#if stripe}}has-stripe{{/if}}{{#if missing}} missing{{/if}}"

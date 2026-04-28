@@ -150,6 +150,41 @@ export const State = {
   /** Generate a new short id. */
   newId(prefix = "md") {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  },
+
+  // -------- Groups --------------------------------------------------------
+
+  /** @returns {PresetGroup[]} */
+  readGroups() {
+    return foundry.utils.deepClone(game.settings.get(MODULE_ID, "groups") ?? []);
+  },
+
+  async writeGroups(groups) {
+    return game.settings.set(MODULE_ID, "groups", groups);
+  },
+
+  async createGroup(group) {
+    const groups = this.readGroups();
+    groups.push(group);
+    await this.writeGroups(groups);
+    return group;
+  },
+
+  async updateGroup(groupId, mutator) {
+    const groups = this.readGroups();
+    const idx = groups.findIndex(g => g.id === groupId);
+    if (idx < 0) return null;
+    groups[idx] = mutator(groups[idx]);
+    await this.writeGroups(groups);
+    return groups[idx];
+  },
+
+  async destroyGroup(groupId) {
+    const groups = this.readGroups();
+    const filtered = groups.filter(g => g.id !== groupId);
+    if (filtered.length === groups.length) return false;
+    await this.writeGroups(filtered);
+    return true;
   }
 };
 

@@ -1,4 +1,4 @@
-{{!-- Macro Library window template - search, tabs, draggable rows --}}
+{{!-- Macro Library window template (v0.2) - search, tabs, draggable rows + groups tab --}}
 <div class="md-library macro-dashboard">
 
   <div class="md-lib-search">
@@ -14,7 +14,7 @@
     </button>
     <button class="md-lib-tab {{#if isGroupsTab}}active{{/if}}"
             data-action="switchLibTab" data-lib-tab="groups">
-      <i class="fa-solid fa-folder"></i> {{localize "MACRO_DASHBOARD.Library.Tab.Groups"}}
+      <i class="fa-solid fa-folder"></i> {{localize "MACRO_DASHBOARD.Library.Tab.Groups"}} · {{groupCount}}
     </button>
   </div>
 
@@ -44,10 +44,57 @@
     {{/if}}
 
     {{#if isGroupsTab}}
-      <div class="md-empty" style="position:static;padding:30px 20px;">
-        <div class="md-empty-icon"><i class="fa-solid fa-folder"></i></div>
-        <div class="md-empty-hint">{{localize "MACRO_DASHBOARD.Library.GroupsComingSoon"}}</div>
+      <div class="md-lib-newgroup" data-action="createGroup">
+        <i class="fa-solid fa-plus"></i>
+        <span>{{localize "MACRO_DASHBOARD.Library.NewGroup"}}</span>
       </div>
+
+      {{#if noGroups}}
+        <div class="md-empty" style="position:static;padding:20px;">
+          <div class="md-empty-icon"><i class="fa-solid fa-folder"></i></div>
+          <div class="md-empty-hint">{{localize "MACRO_DASHBOARD.Library.NoGroups"}}</div>
+        </div>
+      {{else}}
+        {{#each groups}}
+          <div class="md-group" data-group-id="{{id}}">
+            <div class="md-group-head"
+                 data-group-id="{{id}}"
+                 data-action="toggleGroup"
+                 draggable="true"
+                 title="{{name}}">
+              <span class="grip"><i class="fa-solid fa-grip-vertical"></i></span>
+              <div class="md-group-icon" style="--group-color: {{color}}; background: {{color}};">
+                <i class="{{icon}}"></i>
+              </div>
+              <span class="md-group-name">{{name}}</span>
+              <span class="md-group-count">{{countLabel}}</span>
+              <span class="md-group-actions">
+                <span class="md-group-action" data-action="editGroup" title="{{localize "MACRO_DASHBOARD.Library.Group.Edit"}}">
+                  <i class="fa-solid fa-pen"></i>
+                </span>
+                <span class="md-group-action danger" data-action="deleteGroup" title="{{localize "MACRO_DASHBOARD.Library.Group.Delete"}}">
+                  <i class="fa-solid fa-trash"></i>
+                </span>
+                <span class="md-group-chevron">
+                  {{#if expanded}}<i class="fa-solid fa-chevron-down"></i>{{else}}<i class="fa-solid fa-chevron-right"></i>{{/if}}
+                </span>
+              </span>
+            </div>
+            {{#if expanded}}
+              <div class="md-group-body" style="--group-color: {{color}}; border-left-color: {{color}};">
+                {{#each macroDetails}}
+                  <div class="md-lib-row" data-macro-id="{{id}}" draggable="true" title="{{name}}">
+                    <div class="md-tile-icon-mini"><img src="{{img}}" alt=""/></div>
+                    <div class="md-lib-row-meta">
+                      <div class="md-lib-row-name">{{name}}</div>
+                    </div>
+                  </div>
+                {{/each}}
+              </div>
+            {{/if}}
+          </div>
+        {{/each}}
+      {{/if}}
     {{/if}}
 
   </div>

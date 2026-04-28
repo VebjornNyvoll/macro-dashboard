@@ -10,6 +10,8 @@ name: Release
 # always resolves to the most recent release's manifest.
 
 env:
+  # Opt actions into Node 24 ahead of GitHub's deprecation of Node 20 on 2026-09-16.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   project_url:         "https://github.com/${{ github.repository }}"
   latest_manifest_url: "https://github.com/${{ github.repository }}/releases/latest/download/module.json"
   release_module_url:  "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/module.zip"
@@ -26,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Tag must be either "v1.2.3" or "1.2.3"
       - name: Extract Version From Tag

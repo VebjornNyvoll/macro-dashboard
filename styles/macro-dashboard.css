@@ -720,4 +720,140 @@
   outline-offset: -3px;
 }
 
+/* ============ Stripe color picker (CSS-only via :checked) ============ */
+.md-stripe-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.md-stripe-picker input[type="radio"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.md-stripe-picker label.md-stripe-swatch {
+  width: 26px; height: 26px;
+  border-radius: 4px;
+  border: 1px solid var(--fdry-border-light);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fdry-fg-muted);
+  font-size: 11px;
+  transition: outline 80ms;
+}
+.md-stripe-picker label.md-stripe-none {
+  background: transparent;
+  border-style: dashed;
+}
+.md-stripe-picker input[type="radio"]:checked + label.md-stripe-swatch {
+  outline: 2px solid var(--fdry-rule-gold-bright);
+  outline-offset: 1px;
+}
+.md-stripe-picker input[type="radio"]:focus-visible + label.md-stripe-swatch {
+  outline: 2px solid var(--fdry-rule-gold-bright);
+  outline-offset: 2px;
+}
+
+/* ============ Inline submenu inside the context menu ============ */
+.md-ctx-submenu {
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px 6px;
+  align-items: center;
+  border-bottom: 1px solid var(--fdry-border-light);
+  margin-bottom: 2px;
+}
+.md-ctx-submenu .label {
+  font-family: var(--fdry-font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fdry-fg-muted);
+  margin-right: 6px;
+}
+.md-ctx-submenu .swatch {
+  width: 18px; height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid var(--fdry-border-light);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fdry-fg-muted);
+  font-size: 9px;
+}
+.md-ctx-submenu .swatch.none { background: transparent; border-style: dashed; }
+.md-ctx-submenu .swatch:hover { outline: 1px solid var(--fdry-rule-gold-bright); }
+.md-ctx-submenu .swatch.active { outline: 2px solid var(--fdry-rule-gold-bright); }
+
+/* ============ Edit dialog form polish ============ */
+.md-edit-form { padding: 12px 14px; }
+.md-edit-form .form-group { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.md-edit-form label { font-weight: 600; font-size: 12px; color: var(--fdry-fg-secondary); }
+.md-edit-form input[type="text"],
+.md-edit-form textarea {
+  background: var(--fdry-bg-input);
+  border: 1px solid var(--fdry-border-input);
+  box-shadow: var(--fdry-shadow-inset);
+  border-radius: 3px;
+  padding: 6px 8px;
+  color: var(--fdry-fg-primary);
+  font-family: var(--fdry-font-sans);
+  font-size: 12px;
+}
+.md-edit-form textarea { font-family: var(--fdry-font-mono); resize: vertical; min-height: 88px; }
+.md-edit-form .hint {
+  font-size: 11px; font-style: italic; color: var(--fdry-fg-muted); margin: 2px 0 0;
+}
+
+/* ============ Group dialog macro picker ============ */
+.md-group-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--fdry-bg-deepest);
+  border: 1px solid var(--fdry-border-input);
+  border-radius: 4px;
+}
+.md-group-picker .row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+}
+.md-group-picker .row:hover { background: var(--fdry-bg-panel-2); }
+.md-group-picker .row.selected {
+  background: rgba(199,154,58,0.1);
+  border-color: var(--fdry-rule-gold);
+  color: var(--fdry-accent-bright);
+}
+.md-group-picker .row img {
+  width: 18px; height: 18px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+/* ============ Group card in library ============ */
+.md-group .md-group-actions {
+  display: flex; gap: 2px;
+  margin-left: auto;
+}
+.md-group .md-group-action {
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  color: var(--fdry-fg-muted);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.md-group .md-group-action:hover { background: var(--fdry-bg-panel-3); color: var(--fdry-accent-bright); }
+.md-group .md-group-action.danger:hover { background: rgba(165,40,40,0.18); color: var(--fdry-accent-crimson-bright); }
+
 }
