@@ -6,32 +6,32 @@
 // fully initialized before any of the app modules below are evaluated. They
 // access MODULE_ID at class-declaration time (in `static PARTS`) and would
 // otherwise hit a Temporal Dead Zone error through this circular graph.
-import { MODULE_ID }                          from "./constants.mjs";
+import { MODULE_ID, SETTINGS }                from "./constants.mjs";
 import { MacroDashboardApp }                  from "./apps/dashboard-app.mjs";
 import { MacroLibraryApp }                    from "./apps/library-app.mjs";
 import { SYSTEMS, API, registerBuiltinShims } from "./systems.js";
 
-export { MODULE_ID };
+export { MODULE_ID, SETTINGS };
 
 // ---------------------------------------------------------------------------
 // Settings & keybindings registration
 
 function registerSettings() {
-  game.settings.register(MODULE_ID, "dashboards", {
+  game.settings.register(MODULE_ID, SETTINGS.DASHBOARDS, {
     scope:   "world",
     config:  false,
     type:    Object,
     default: { global: [] }
   });
 
-  game.settings.register(MODULE_ID, "groups", {
+  game.settings.register(MODULE_ID, SETTINGS.GROUPS, {
     scope:   "world",
     config:  false,
     type:    Object,
     default: []
   });
 
-  game.settings.register(MODULE_ID, "autoSwitch", {
+  game.settings.register(MODULE_ID, SETTINGS.AUTO_SWITCH, {
     name:    "MACRO_DASHBOARD.Settings.AutoSwitch.Name",
     hint:    "MACRO_DASHBOARD.Settings.AutoSwitch.Hint",
     scope:   "world",
@@ -41,7 +41,7 @@ function registerSettings() {
     onChange: () => MacroDashboardApp.instance?.render()
   });
 
-  game.settings.register(MODULE_ID, "tileSize", {
+  game.settings.register(MODULE_ID, SETTINGS.TILE_SIZE, {
     name:    "MACRO_DASHBOARD.Settings.TileSize.Name",
     hint:    "MACRO_DASHBOARD.Settings.TileSize.Hint",
     scope:   "client",
@@ -56,7 +56,7 @@ function registerSettings() {
     onChange: () => MacroDashboardApp.instance?.render()
   });
 
-  game.settings.register(MODULE_ID, "layout", {
+  game.settings.register(MODULE_ID, SETTINGS.LAYOUT, {
     name:    "MACRO_DASHBOARD.Settings.Layout.Name",
     hint:    "MACRO_DASHBOARD.Settings.Layout.Hint",
     scope:   "client",
@@ -72,7 +72,7 @@ function registerSettings() {
 
   // Manual mode: which scene the GM is currently viewing dashboards for.
   // Only consulted when autoSwitch === false.
-  game.settings.register(MODULE_ID, "viewingSceneId", {
+  game.settings.register(MODULE_ID, SETTINGS.VIEWING_SCENE_ID, {
     scope:   "client",
     config:  false,
     type:    String,
@@ -82,17 +82,21 @@ function registerSettings() {
 
 function registerKeybindings() {
   game.keybindings.register(MODULE_ID, "toggleDashboard", {
-    name:     "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Name",
-    editable: [{ key: "KeyM" }],
-    onDown:   () => { if (game.user.isGM) MacroDashboardApp.toggle(); return true; },
-    restricted: true
+    name:       "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Name",
+    hint:       "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Hint",
+    editable:   [{ key: "KeyM" }],
+    onDown:     () => { MacroDashboardApp.toggle(); return true; },
+    restricted: true,
+    precedence: CONST.KEYBINDING_PRECEDENCE?.NORMAL ?? 0
   });
 
   game.keybindings.register(MODULE_ID, "toggleLibrary", {
-    name:     "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Name",
-    editable: [{ key: "KeyL" }],
-    onDown:   () => { if (game.user.isGM) MacroLibraryApp.toggle(); return true; },
-    restricted: true
+    name:       "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Name",
+    hint:       "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Hint",
+    editable:   [{ key: "KeyL" }],
+    onDown:     () => { MacroLibraryApp.toggle(); return true; },
+    restricted: true,
+    precedence: CONST.KEYBINDING_PRECEDENCE?.NORMAL ?? 0
   });
 }
 
@@ -102,12 +106,12 @@ function registerKeybindings() {
 export const State = {
   /** @returns {{global: Dashboard[], [sceneId: string]: Dashboard[]}} */
   read() {
-    return foundry.utils.deepClone(game.settings.get(MODULE_ID, "dashboards") ?? { global: [] });
+    return foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.DASHBOARDS) ?? { global: [] });
   },
 
   /** @param {object} next */
   async write(next) {
-    return game.settings.set(MODULE_ID, "dashboards", next);
+    return game.settings.set(MODULE_ID, SETTINGS.DASHBOARDS, next);
   },
 
   /** Update the dashboard with the given id, applying mutator(d) -> newD. */
@@ -162,11 +166,11 @@ export const State = {
 
   /** @returns {PresetGroup[]} */
   readGroups() {
-    return foundry.utils.deepClone(game.settings.get(MODULE_ID, "groups") ?? []);
+    return foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.GROUPS) ?? []);
   },
 
   async writeGroups(groups) {
-    return game.settings.set(MODULE_ID, "groups", groups);
+    return game.settings.set(MODULE_ID, SETTINGS.GROUPS, groups);
   },
 
   async createGroup(group) {
@@ -276,7 +280,16 @@ Hooks.once("ready", () => {
   // Notify companion modules that the API is ready for addSystemIntegration calls
   Hooks.callAll("macro-dashboard-ready", API);
 
-  // Per-tile hotkey listener (GM only - skip when typing in input fields)
+  // Per-tile hotkey listener.
+  //
+  // GM only and intentionally GLOBAL (attached to `document`) - per-tile
+  // hotkeys must fire whether or not the dashboard window is open. Tying
+  // this listener to the dashboard application's lifecycle would silently
+  // break the hotkey feature any time the user closed the window.
+  //
+  // The listener is attached exactly once per session: `Hooks.once("ready")`
+  // fires once, and a page reload destroys the entire JS context (so no
+  // stale listener can survive into the next session).
   if (game.user?.isGM) {
     document.addEventListener("keydown", _onTileHotkey);
   }
@@ -324,7 +337,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
 // so its "Viewing:" line and tabs reflect the new scene.
 Hooks.on("canvasReady", () => {
   if (!game.user?.isGM) return;
-  if (game.settings.get(MODULE_ID, "autoSwitch")) {
+  if (game.settings.get(MODULE_ID, SETTINGS.AUTO_SWITCH)) {
     MacroDashboardApp.instance?.render();
   }
 });

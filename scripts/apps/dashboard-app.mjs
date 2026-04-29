@@ -2,7 +2,7 @@
 // drag-drop with snap, hover tooltip, right-click context menu with
 // stripe submenu and group submenu, edit-macro dialog integration.
 
-import { MODULE_ID }          from "../constants.mjs";
+import { MODULE_ID, SETTINGS } from "../constants.mjs";
 import { State }              from "../module.mjs";
 import { EditTileDialog }     from "./edit-tile-dialog.mjs";
 import { CreateGroupDialog }  from "./create-group-dialog.mjs";
@@ -79,14 +79,14 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
   // -----------------------------------------------------------------------
   async _prepareContext() {
     const data       = State.read();
-    const autoSwitch = game.settings.get(MODULE_ID, "autoSwitch");
-    const tileSize   = game.settings.get(MODULE_ID, "tileSize");
-    const layout     = game.settings.get(MODULE_ID, "layout");
+    const autoSwitch = game.settings.get(MODULE_ID, SETTINGS.AUTO_SWITCH);
+    const tileSize   = game.settings.get(MODULE_ID, SETTINGS.TILE_SIZE);
+    const layout     = game.settings.get(MODULE_ID, SETTINGS.LAYOUT);
     const activeScene = game.scenes.active ?? game.scenes.viewed;
 
     let viewingSceneId = autoSwitch
       ? activeScene?.id
-      : (game.settings.get(MODULE_ID, "viewingSceneId") || activeScene?.id);
+      : (game.settings.get(MODULE_ID, SETTINGS.VIEWING_SCENE_ID) || activeScene?.id);
     if (!game.scenes.get(viewingSceneId)) viewingSceneId = activeScene?.id;
 
     const viewingScene = game.scenes.get(viewingSceneId);
@@ -156,19 +156,29 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   // -----------------------------------------------------------------------
+  // Listener-attachment idempotency: every queryselector below filters out
+  // elements that already carry [data-wired]. New elements created by a
+  // re-render get wired exactly once; survivors of a partial re-render
+  // are skipped. ApplicationV2's HandlebarsApplicationMixin replaces part
+  // contents on full renders (so new elements appear unwired and pass the
+  // filter), but the guard makes us robust to any future render strategy
+  // that preserves DOM nodes across renders.
   _onRender(context, options) {
+    super._onRender?.(context, options);
     const root = this.element;
 
     // Canvas drag-drop
-    const canvas = root.querySelector(".md-canvas");
+    const canvas = root.querySelector(".md-canvas:not([data-wired])");
     if (canvas) {
+      canvas.dataset.wired = "1";
       canvas.addEventListener("dragover", this.#onCanvasDragOver.bind(this));
       canvas.addEventListener("dragleave", this.#onCanvasDragLeave.bind(this));
       canvas.addEventListener("drop", this.#onCanvasDrop.bind(this));
     }
 
     // Tile interactions: drag, contextmenu, hover tooltip
-    for (const tile of root.querySelectorAll(".md-tile")) {
+    for (const tile of root.querySelectorAll(".md-tile:not([data-wired])")) {
+      tile.dataset.wired = "1";
       const tileId  = tile.dataset.tileId;
       const macroId = tile.dataset.macroId;
 
@@ -195,17 +205,19 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     }
 
     // Scene picker (manual mode)
-    const sceneSelect = root.querySelector("[data-scene-select]");
+    const sceneSelect = root.querySelector("[data-scene-select]:not([data-wired])");
     if (sceneSelect) {
+      sceneSelect.dataset.wired = "1";
       sceneSelect.addEventListener("change", async (ev) => {
-        await game.settings.set(MODULE_ID, "viewingSceneId", ev.target.value);
+        await game.settings.set(MODULE_ID, SETTINGS.VIEWING_SCENE_ID, ev.target.value);
         this.activeId = null;
         this.render();
       });
     }
 
     // Tab interactions: rename via dblclick + drag-to-reorder within scope
-    for (const tab of root.querySelectorAll(".md-tab[data-tab-id]")) {
+    for (const tab of root.querySelectorAll(".md-tab[data-tab-id]:not([data-wired])")) {
+      tab.dataset.wired = "1";
       tab.addEventListener("dblclick", (ev) => {
         if (ev.target.closest(".md-tab-close")) return;
         this.#startInlineRename(tab.dataset.tabId, tab);
@@ -247,6 +259,10 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     this.#hideTooltip();
     this.#closeContextMenu();
     if (this.#tooltipEl) { this.#tooltipEl.remove(); this.#tooltipEl = null; }
+    // Drop the singleton reference so toggle() doesn't keep a closed
+    // instance (and all its private state) alive for the rest of the
+    // session. The next toggle() will construct a fresh instance.
+    if (MacroDashboardApp.#_instance === this) MacroDashboardApp.#_instance = null;
     super._onClose?.(options);
   }
 
@@ -274,7 +290,7 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     ev.currentTarget.classList.add("drop-active");
 
     // Drop ghost only in grid layout
-    if (game.settings.get(MODULE_ID, "layout") !== "grid") return;
+    if (game.settings.get(MODULE_ID, SETTINGS.LAYOUT) !== "grid") return;
     let ghost = ev.currentTarget.querySelector(".md-drop-ghost");
     if (!ghost) {
       ghost = document.createElement("div");
@@ -303,7 +319,7 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     catch { return; }
 
     if (!this.activeId) return;
-    const layout = game.settings.get(MODULE_ID, "layout");
+    const layout = game.settings.get(MODULE_ID, SETTINGS.LAYOUT);
 
     // In columns mode, dropping on a column inherits its stripe color
     let columnStripe = null;
@@ -429,8 +445,8 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   static async #onToggleAutoSwitch() {
-    const cur = game.settings.get(MODULE_ID, "autoSwitch");
-    await game.settings.set(MODULE_ID, "autoSwitch", !cur);
+    const cur = game.settings.get(MODULE_ID, SETTINGS.AUTO_SWITCH);
+    await game.settings.set(MODULE_ID, SETTINGS.AUTO_SWITCH, !cur);
     this.render();
   }
 

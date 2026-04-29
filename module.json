@@ -5,14 +5,13 @@
   "version": "#{VERSION}#",
   "compatibility": {
     "minimum": "12",
-    "verified": "13",
-    "maximum": ""
+    "verified": "13"
   },
   "authors": [
     { "name": "Vebjorn Nyvoll", "email": "vebjorn.nyvoll@gmail.com" }
   ],
   "esmodules": ["scripts/module.mjs"],
-  "styles": ["styles/tokens.css", "styles/macro-dashboard.css"],
+  "styles": ["styles/macro-dashboard.css"],
   "languages": [
     { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],

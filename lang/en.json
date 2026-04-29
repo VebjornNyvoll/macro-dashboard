@@ -52,7 +52,9 @@
   "MACRO_DASHBOARD.Settings.Layout.Grid": "Free Grid",
 
   "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Name": "Toggle Macro Dashboard",
+  "MACRO_DASHBOARD.Keybinding.ToggleDashboard.Hint": "Open or close the Macro Dashboard window. GM only.",
   "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Name": "Toggle Macro Library",
+  "MACRO_DASHBOARD.Keybinding.ToggleLibrary.Hint": "Open or close the Macro Library palette. GM only.",
 
   "MACRO_DASHBOARD.Notification.NotGM": "Macro Dashboard is GM-only.",
   "MACRO_DASHBOARD.Notification.MacroMissing": "Macro no longer exists. Right-click the tile to remove it.",

@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-04-29
+
+### Fixed
+
+- **Global CSS pollution from `styles/tokens.css`.** That file was a hallucinated design-system artifact: it loaded BEFORE `macro-dashboard.css` in the manifest, declared the entire `--fdry-*` token palette on `:root`, overrode Foundry core CSS variables (`--color-text-primary`, `--color-text-secondary`, `--color-bg-option`), and set global element styles on `body`, `h1`–`h4`, `p`, `a`. This silently restyled every Foundry window for every connected user — login screen, sidebar, every system's actor sheets, every dialog. Deleted `tokens.css` entirely; moved the design tokens this module actually uses into a single `.macro-dashboard { ... }` block at the top of `macro-dashboard.css` so they cannot leak. Removed `tokens.css` from `module.json` `styles`.
+
+- **Module CSS losing the cascade to Foundry core.** `macro-dashboard.css` wrapped its entire body in `@layer modules { ... }`. CSS cascade priority is `unlayered author > @layer'd author`, and Foundry core CSS is unlayered, so any core selector that touched the same properties on the same elements silently overrode the module's scoped rules regardless of selector specificity. Stripped the `@layer modules` wrapping. Module CSS now applies at natural specificity.
+
+- **Invalid `compatibility.maximum: ""` in `module.json`.** Empty string is not a valid semver and Foundry's version comparator can misbehave on it. Omitted the field — Foundry treats absence as "no upper bound", which is the intent.
+
+- **`_onRender` listener-attachment idempotency.** Both `MacroDashboardApp._onRender` and `MacroLibraryApp._onRender` attached event listeners to every matching element on every render. ApplicationV2's HandlebarsApplicationMixin replaces part contents on full renders, so freshly-rendered elements had no prior listeners and accumulation did not manifest in practice — but a future render strategy that preserved DOM nodes (or a partial re-render that surgically updated one element) would have caused handlers to fire 2×, 4×, 8× per gesture. Every wiring loop now filters `:not([data-wired])` and stamps `dataset.wired = "1"` on each element it wires, making attachment idempotent regardless of render strategy.
+
+- **Singleton instance leak in both apps.** `MacroDashboardApp.#_instance` and `MacroLibraryApp.#_instance` were set in `toggle()` but never nulled in `_onClose`, so a closed window's full private state (tooltip element, context-menu element, per-instance Sets and Maps) lingered in memory for the rest of the session. Both `_onClose` overrides now null the singleton if it points at the closing instance.
+
+### Changed
+
+- **Keybindings now expose hint text in Configure Controls.** `MACRO_DASHBOARD.Keybinding.ToggleDashboard.Hint` and `.ToggleLibrary.Hint` added to `lang/en.json`; the `hint:` field added to both `game.keybindings.register()` calls. The Configure Controls panel previously showed a blank description row under each binding.
+
+- **Keybindings now declare `precedence` explicitly** as `CONST.KEYBINDING_PRECEDENCE?.NORMAL ?? 0` (matching the canonical pattern from `cpr-netrunner-cockpit`). Functionally equivalent to the previous implicit default but v12-safe and explicit.
+
+- **Removed redundant `if (game.user.isGM)` guards from keybinding `onDown` handlers.** Both keybindings already declared `restricted: true`, which causes Foundry to suppress the binding entirely for non-GM users. The internal guard was dead code.
+
+- **"Drop to add" CSS string is now localisable.** Was hardcoded as `content: "Drop to add"` in a `::after` pseudo-element rule, which cannot be passed through `game.i18n`. Now set on the canvas element as `data-drop-label="{{localize 'MACRO_DASHBOARD.Drop.Pill'}}"` from `dashboard.hbs`, and pulled into the pseudo-element via `content: attr(data-drop-label)`.
+
+- **Setting keys extracted to a frozen `SETTINGS` constants object** in `scripts/constants.mjs`. Every `game.settings.register` / `.get` / `.set` call across `module.mjs` and `dashboard-app.mjs` now references `SETTINGS.AUTO_SWITCH` (etc.) rather than bare string literals. A typo at a call site (`SETTINGS.AUTOSWICH`) is now a static `ReferenceError` instead of a silent "always returns the default" runtime bug.
+
+### Considered and intentionally not changed
+
+- **Per-tile hotkey listener stays attached to `document` via `Hooks.once("ready")`.** Audited as a candidate for moving into `MacroDashboardApp._onFirstRender` / `_onClose`, but tying it to the dashboard window's lifecycle would silently break the feature: per-tile hotkeys are designed to fire whether or not the tile's parent dashboard is currently open. The listener attaches exactly once per session (`Hooks.once` runs once, and a page reload destroys the entire JS context) so no accumulation is possible. Added an explanatory comment in `module.mjs`.
+
+### Files
+
+- Removed: `styles/tokens.css`.
+- Updated: `module.json`, `lang/en.json`, `templates/dashboard.hbs`, `styles/macro-dashboard.css`, `scripts/constants.mjs`, `scripts/module.mjs`, `scripts/apps/dashboard-app.mjs`, `scripts/apps/library-app.mjs`.
+
+### Audit context
+
+This release ships the Tier 1 and Tier 2 items from a structural audit comparing this module against two known-working Foundry modules ([`Jesperhh01/cpr-rolltable-dashboard-module`](https://github.com/Jesperhh01/cpr-rolltable-dashboard-module), [`VebjornNyvoll/cpr-netrunner-cockpit`](https://github.com/VebjornNyvoll/cpr-netrunner-cockpit)) plus the v13/v14 official API docs and the League of Foundry Developers wiki. The two scene-controls / TDZ regressions fixed in v0.3.1 were the headline blockers; this release addresses the structural issues that the audit surfaced underneath them.
+
 ## [0.3.1] - 2026-04-29
 
 ### Fixed

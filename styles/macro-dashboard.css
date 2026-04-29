@@ -1,13 +1,69 @@
-@layer modules {
 /* ============================================================
-   Macro Dashboard — module-specific styles
-   Scoped under .macro-dashboard
+   Macro Dashboard - module-specific styles
+   All selectors are scoped under .macro-dashboard, which is set on:
+     - the application root (via DEFAULT_OPTIONS.classes)
+     - tooltip + context-menu elements that float into <body>
+       (they get the .macro-dashboard class when constructed)
+     - DialogV2 windows (via DEFAULT_OPTIONS.classes / contentClasses)
+
+   Design tokens (--fdry-*) are scoped to .macro-dashboard so they
+   cannot leak into Foundry core UI. DO NOT move any of these to
+   :root - that would restyle every Foundry window for every user.
+
+   Likewise, this file is intentionally NOT wrapped in @layer modules.
+   Layered author CSS always loses to unlayered CSS, and Foundry core
+   is unlayered, so wrapping the module in a layer would let core
+   selectors silently override our scoped styles.
    ============================================================ */
 
-/* Module accent override for the dashboard */
 .macro-dashboard {
-  --fdry-accent: var(--fdry-accent-gold);
-  --fdry-accent-bright: var(--fdry-accent-gold-bright);
+  /* ---------- Background neutrals ---------- */
+  --fdry-bg-deepest:             #0e0e10;
+  --fdry-bg-window:              #1a1a1d;
+  --fdry-bg-panel:               #232328;
+  --fdry-bg-panel-2:             #2b2b31;
+  --fdry-bg-panel-3:             #34343b;
+  --fdry-bg-input:               #14141a;
+
+  /* ---------- Text ---------- */
+  --fdry-fg-primary:             #e8e3d8;
+  --fdry-fg-secondary:           #b3ad9c;
+  --fdry-fg-muted:               #7a7464;
+  --fdry-fg-emphatic:            #f8efd8;
+  --fdry-fg-link:                #d4a553;
+  --fdry-fg-link-hover:          #f0c97a;
+
+  /* ---------- Rules + borders ---------- */
+  --fdry-rule-gold:              #a88b3a;
+  --fdry-rule-gold-bright:       #d4af56;
+  --fdry-border-light:           #3a3a42;
+  --fdry-border-input:           #1c1c22;
+
+  /* ---------- Accent palette (this module is gold) ---------- */
+  --fdry-accent-gold:            #c79a3a;
+  --fdry-accent-gold-bright:     #f1c560;
+  --fdry-accent-crimson:         #8b1d1d;
+  --fdry-accent-crimson-bright:  #c54141;
+
+  /* ---------- Semantic ---------- */
+  --fdry-warning:                #b08038;
+  --fdry-warning-bg:             #2e2418;
+
+  /* ---------- Shadows ---------- */
+  --fdry-shadow-card:            0 2px 8px rgba(15, 8, 0, 0.45);
+  --fdry-shadow-popup:           0 12px 40px rgba(15, 8, 0, 0.65);
+  --fdry-shadow-inset:           inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  --fdry-shadow-emboss:          inset 0 1px 0 rgba(255, 220, 160, 0.06),
+                                 inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+
+  /* ---------- Typography ---------- */
+  --fdry-font-sans:              "Signika", ui-sans-serif, "Segoe UI", Roboto, Arial, sans-serif;
+  --fdry-font-display:           "Cinzel", "Modesto Condensed", "Cormorant Garamond", Georgia, serif;
+  --fdry-font-mono:              "JetBrains Mono", "IBM Plex Mono", "Fira Code", ui-monospace, monospace;
+
+  /* ---------- Computed accents (override these to retheme) ---------- */
+  --fdry-accent:                 var(--fdry-accent-gold);
+  --fdry-accent-bright:          var(--fdry-accent-gold-bright);
 }
 
 /* ============ Dashboard window body ============ */
@@ -488,9 +544,12 @@
   margin-left: 8px;
 }
 
-/* drag preview animation feedback (target) */
+/* drag preview animation feedback (target).
+   Label string lives on the canvas DOM as data-drop-label, set by the
+   template via {{localize "MACRO_DASHBOARD.Drop.Pill"}}. Pseudo-element
+   `content` cannot itself be localised, so we pull it via attr(). */
 .md-canvas.drop-active::after {
-  content: "Drop to add";
+  content: attr(data-drop-label);
   position: absolute;
   top: 12px; left: 50%;
   transform: translateX(-50%);
@@ -878,6 +937,4 @@
   background: rgba(199,154,58,0.12);
   outline: 1px dashed var(--fdry-rule-gold-bright);
   outline-offset: -1px;
-}
-
 }

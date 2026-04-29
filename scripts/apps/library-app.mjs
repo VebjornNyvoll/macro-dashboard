@@ -90,12 +90,19 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
+  // Listener-attachment idempotency: every queryselector below filters out
+  // elements that already carry [data-wired]. ApplicationV2's
+  // HandlebarsApplicationMixin replaces part contents on full renders, so
+  // freshly-rendered elements pass the filter; the guard makes us robust
+  // to any future render strategy that preserves DOM nodes across renders.
   _onRender(context, options) {
+    super._onRender?.(context, options);
     const root = this.element;
 
     // Search input - re-focus after re-render (which destroys and recreates the input)
-    const search = root.querySelector("input.md-lib-search-input");
+    const search = root.querySelector("input.md-lib-search-input:not([data-wired])");
     if (search) {
+      search.dataset.wired = "1";
       search.addEventListener("input", (ev) => {
         this.searchTerm = ev.target.value;
         this.render();
@@ -107,7 +114,8 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     // Drag from macro rows (Macros tab + nested rows in expanded groups)
-    for (const row of root.querySelectorAll(".md-lib-row[data-macro-id]")) {
+    for (const row of root.querySelectorAll(".md-lib-row[data-macro-id]:not([data-wired])")) {
+      row.dataset.wired = "1";
       row.addEventListener("dragstart", (ev) => {
         const macroId = row.dataset.macroId;
         ev.dataTransfer.setData("application/json", JSON.stringify({ type: "macro", macroId }));
@@ -118,7 +126,8 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     // Drag from group header (drops the entire group as a batch)
-    for (const head of root.querySelectorAll(".md-group-head[data-group-id]")) {
+    for (const head of root.querySelectorAll(".md-group-head[data-group-id]:not([data-wired])")) {
+      head.dataset.wired = "1";
       head.addEventListener("dragstart", (ev) => {
         const groupId = head.dataset.groupId;
         ev.dataTransfer.setData("application/json", JSON.stringify({ type: "group", groupId }));
@@ -127,6 +136,14 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       });
       head.addEventListener("dragend", () => head.classList.remove("dragging"));
     }
+  }
+
+  _onClose(options) {
+    // Drop the singleton reference so toggle() doesn't keep a closed
+    // instance (and all its private state) alive for the rest of the
+    // session. The next toggle() will construct a fresh instance.
+    if (MacroLibraryApp.#_instance === this) MacroLibraryApp.#_instance = null;
+    super._onClose?.(options);
   }
 
   static #onSwitchTab(event, target) {
