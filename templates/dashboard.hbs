@@ -89,7 +89,10 @@
                    draggable="true"
                    {{#if stripe}}style="--tile-stripe: {{stripe}};"{{/if}}
                    title="{{name}}">
-                <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
+                {{!-- draggable="false" on the inner <img>: <img> is natively draggable by default,
+                     and an inner native drag source overrides the parent's draggable="true",
+                     so clicking the icon would start a (broken) image drag instead of a tile drag. --}}
+                <div class="md-tile-icon"><img src="{{img}}" alt="" draggable="false"/></div>
                 <div class="md-tile-name">{{name}}</div>{{#if hotkey}}<span class="md-tile-kbd">{{hotkey}}</span>{{/if}}
               </div>
             {{/each}}
@@ -103,7 +106,10 @@
                draggable="true"
                style="left: calc(12px + {{x}} * var(--md-cell)); top: calc(12px + {{y}} * var(--md-cell));{{#if stripe}} --tile-stripe: {{stripe}};{{/if}}"
                title="{{name}}">
-            <div class="md-tile-icon"><img src="{{img}}" alt=""/></div>
+            {{!-- draggable="false" on the inner <img>: <img> is natively draggable by default,
+                 and an inner native drag source overrides the parent's draggable="true",
+                 so clicking the icon would start a (broken) image drag instead of a tile drag. --}}
+            <div class="md-tile-icon"><img src="{{img}}" alt="" draggable="false"/></div>
             <div class="md-tile-name">{{name}}</div>{{#if hotkey}}<span class="md-tile-kbd">{{hotkey}}</span>{{/if}}
           </div>
         {{/each}}

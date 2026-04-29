@@ -836,8 +836,23 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       await State.updateGroup(groupId, g => ({ ...g, macros: [...g.macros, macroId] }));
       ui.notifications.info(`Added to group "${group.name}".`);
     } else {
-      // No group provided -> create new with this macro pre-selected
-      await CreateGroupDialog.open({ initialMacroIds: [macroId] });
+      // No group provided -> create new. If the user has a multi-tile
+      // selection AND the right-clicked tile is part of it, pre-select
+      // the macros from the WHOLE selection rather than just the
+      // right-clicked one. This makes "+ New group from selection..."
+      // do the right thing in both single-tile and box-select contexts,
+      // matching what users naturally read the label as meaning.
+      const selSet = this.selectedTileIds instanceof Set ? this.selectedTileIds : new Set();
+      let initialMacroIds = [macroId];
+      if (selSet.size > 1) {
+        const ids = new Set();
+        for (const tid of selSet) {
+          const found = this.#findTile(tid);
+          if (found?.tile?.macroId) ids.add(found.tile.macroId);
+        }
+        if (ids.size > 1) initialMacroIds = [...ids];
+      }
+      await CreateGroupDialog.open({ initialMacroIds });
     }
     game.macroDashboard?.MacroLibraryApp?.instance?.render?.();
   }
@@ -960,12 +975,15 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
         <span class="md-ctx-icon"><i class="fa-solid fa-xmark"></i></span>
         <span>${game.i18n.localize("MACRO_DASHBOARD.SelectionMenu.Clear")}</span>
       </div>
-      <div class="md-ctx-sep"></div>
     `;
 
-    const menu = document.createElement("div");
-    menu.className = "md-ctx macro-dashboard";
-    menu.innerHTML = selectionHeader + `
+    // Per-tile actions are HIDDEN when a multi-tile selection is active.
+    // Edit / Duplicate / Execute / Change Stripe / Add to Group / Remove
+    // all act on a single right-clicked macro, which is misleading when
+    // the user has multiple tiles selected and right-clicked one of them.
+    // The selection-aware items at the top of the menu cover the
+    // multi-tile equivalents (Delete N, Group N, Clear selection).
+    const perTileSection = selectionActive ? "" : `
       <div class="md-ctx-item" data-ctx-action="edit">
         <span class="md-ctx-icon"><i class="fa-solid fa-pen"></i></span>
         <span>${game.i18n.localize("MACRO_DASHBOARD.ContextMenu.Edit")}</span>
@@ -994,6 +1012,10 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
         <span>${game.i18n.localize("MACRO_DASHBOARD.ContextMenu.Remove")}</span>
       </div>
     `;
+
+    const menu = document.createElement("div");
+    menu.className = "md-ctx macro-dashboard";
+    menu.innerHTML = selectionHeader + perTileSection;
 
     document.body.appendChild(menu);
     const rect = menu.getBoundingClientRect();

@@ -716,6 +716,28 @@
   color: var(--fdry-fg-secondary);
   flex: none;
 }
+/* Cap the manual-mode scene picker so a long scene name (or a system
+   that adds suffixes to scene labels) can't push the auto-switch toggle
+   off the right edge of the modebar. */
+.md-modebar select {
+  max-width: 220px;
+  min-width: 0;
+  flex: 0 1 220px;
+  height: 22px;
+  background: var(--fdry-bg-input);
+  border: 1px solid var(--fdry-border-input);
+  border-radius: 3px;
+  padding: 0 6px;
+  color: var(--fdry-fg-primary);
+  font-family: var(--fdry-font-sans);
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+.md-modebar select:focus {
+  outline: none;
+  border-color: var(--fdry-rule-gold);
+  box-shadow: 0 0 0 1px var(--fdry-rule-gold-bright);
+}
 .md-modebar .auto-pill {
   font-size: 9px;
   font-weight: 700;

@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.9] - 2026-04-29
+
+### Fixed
+
+- **Drag fails when starting from the macro icon image.** The tile root has `draggable="true"`, but the inner `<img>` is also natively draggable by default - and a draggable child overrides the parent's drag source. Clicking the icon started a (broken) image drag instead of a tile drag, leaving the tile with the `.dragging` class on but no actual drag in progress. The user had to grab somewhere outside the icon to make it work. Added `draggable="false"` to the `<img>` in both grid and column layouts in `dashboard.hbs`.
+
+- **"+ New group from selection..." in the per-tile menu only added the right-clicked macro.** Two menu paths reach the Create Preset Group dialog: the new selection-aware "Group N tiles into a preset..." item at the top of the menu (when a multi-selection is active), and the per-tile "Add to Preset Group → + New group from selection..." item that's been there since v0.2. Both have similar labels but only the first used the full multi-selection. Made `addMacroToGroup(macroId, null)` aware of the multi-selection: if `selectedTileIds` has more than one entry, it pre-selects every selected tile's macro instead of just the right-clicked one. Both paths now do the right thing.
+
+- **Manual-mode scene picker overflowed the modebar.** The `<select>` had no width constraints, so a long scene name (or a system that adds suffixes like " (active scene)") could push the auto-switch toggle button off the right edge. Capped at `max-width: 220px; flex: 0 1 220px` with `text-overflow: ellipsis` styling and a proper modebar-themed appearance (input-coloured bg, gold focus ring).
+
+- **Orphan code from v0.3.8's `addMacroToGroup` edit removed.** The previous patch's oldString didn't match the entire old method body, so half of the v0.3.6 implementation was left behind below the new method. Caught immediately by LSP (syntax errors at the orphan block) and removed.
+
+### Changed
+
+- **Per-tile context menu items hidden when a multi-tile selection is active.** Right-click on any tile in a multi-selection now shows ONLY the selection-aware items (Delete N, Group N into a preset..., Clear selection). The single-macro items (Edit Macro, Duplicate, Execute Macro, Change Color Stripe, Add to Preset Group, Remove from Dashboard) are hidden because they're misleading in a multi-tile context - they would silently act on only the right-clicked tile. The trailing separator is also dropped from the selection header in this case so the menu doesn't end with a hanging divider.
+
+### Files
+
+- Updated: [`templates/dashboard.hbs`](templates/dashboard.hbs) - `draggable="false"` on the inner `<img>` in both grid and column tile templates.
+- Updated: [`scripts/apps/dashboard-app.mjs`](scripts/apps/dashboard-app.mjs) - `addMacroToGroup` is selection-aware; `#openContextMenu` gates the per-tile section behind `!selectionActive`; orphan v0.3.8 code removed.
+- Updated: [`styles/macro-dashboard.css`](styles/macro-dashboard.css) - `.md-modebar select` now has max-width, ellipsis, and themed appearance.
+
 ## [0.3.8] - 2026-04-29
 
 ### Fixed
