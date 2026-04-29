@@ -34,6 +34,28 @@ function isImagePath(s) {
   return s.includes("/") || /\.(png|jpg|jpeg|svg|webp|gif|avif)$/i.test(s);
 }
 
+/** Find the nearest free integer cell to (x, y) that isn't in the `occupied`
+ *  Set (which uses "x,y" string keys). Searches outward in expanding-square
+ *  rings up to `maxRadius`. Returns the original (x, y) if nothing free is
+ *  found within the radius (degenerate case - dashboard near-fully occupied). */
+function nearestFreeCell(x, y, occupied, maxRadius = 50) {
+  const isFree = (cx, cy) => cx >= 0 && cy >= 0 && !occupied.has(`${cx},${cy}`);
+  if (isFree(x, y)) return { x, y };
+  for (let r = 1; r <= maxRadius; r++) {
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        // Only scan the perimeter of the current ring (avoids re-checking
+        // inner rings on each pass).
+        if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (isFree(nx, ny)) return { x: nx, y: ny };
+      }
+    }
+  }
+  return { x, y };
+}
+
 export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
@@ -201,7 +223,10 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
         // ALL selected tiles in the payload (with their starting positions)
         // so the drop handler can move them as a group while preserving
         // their relative offsets. Otherwise it's a single-tile drag.
-        const inSelection = this.selectedTileIds.size > 1 && this.selectedTileIds.has(tileId);
+        // Defensive: if selectedTileIds isn't a Set (init race / framework
+        // shenanigans), treat as no-selection so we don't crash dragstart.
+        const selSet = this.selectedTileIds instanceof Set ? this.selectedTileIds : new Set();
+        const inSelection = selSet.size > 1 && selSet.has(tileId);
         let payload;
         if (inSelection) {
           const positions = {};
@@ -211,7 +236,7 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
             for (const d of arr) {
               if (d.id !== this.activeId) continue;
               for (const t of (d.tiles ?? [])) {
-                if (this.selectedTileIds.has(t.id)) {
+                if (selSet.has(t.id)) {
                   positions[t.id] = { x: t.x ?? 0, y: t.y ?? 0 };
                 }
               }
@@ -231,9 +256,25 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
         // for library drops) still accepts the move; the browser silently
         // suppresses the drop event when dropEffect is not in effectAllowed.
         ev.dataTransfer.effectAllowed = "copyMove";
-        // Centre the drag-ghost on the cursor instead of letting the browser
-        // anchor it to wherever the user happened to click inside the tile.
-        ev.dataTransfer.setDragImage(tile, tile.offsetWidth / 2, tile.offsetHeight / 2);
+
+        // Use a CLONE of the tile (with .dragging/.selected stripped, full
+        // opacity) as the drag image so the ghost is fully visible. If we
+        // pass `tile` itself, the browser captures the source element AT
+        // dragstart - which is also the moment we add .dragging (opacity
+        // 0.55) below, so the ghost ends up half-transparent and hard to
+        // see. The clone is positioned offscreen and removed at the end of
+        // the current task tick after the browser has snapshotted it.
+        const ghost = tile.cloneNode(true);
+        ghost.classList.remove("dragging", "selected");
+        ghost.style.position = "fixed";
+        ghost.style.top      = "-1000px";
+        ghost.style.left     = "-1000px";
+        ghost.style.opacity  = "1";
+        ghost.style.pointerEvents = "none";
+        document.body.appendChild(ghost);
+        ev.dataTransfer.setDragImage(ghost, tile.offsetWidth / 2, tile.offsetHeight / 2);
+        setTimeout(() => ghost.remove(), 0);
+
         tile.classList.add("dragging");
         this.#hideTooltip();
       });
@@ -514,9 +555,34 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       columnStripe = col?.dataset.stripe || null;
     }
 
-    const { x, y } = this.#snapTo(ev, canvasEl);
+    const { x: rawX, y: rawY } = this.#snapTo(ev, canvasEl);
+
+    // Build the set of occupied cells in the active dashboard so we can
+    // resolve drops to the nearest free slot. Cells occupied by tiles
+    // *being moved* (single-tile move payload, or every tile in a
+    // multi-tile move payload) are NOT counted as occupied - they're
+    // about to leave their old slots.
+    const data = State.read();
+    let liveDashboard = null;
+    for (const arr of Object.values(data)) {
+      if (!Array.isArray(arr)) continue;
+      const found = arr.find(d => d.id === this.activeId);
+      if (found) { liveDashboard = found; break; }
+    }
+    const liveTiles = liveDashboard?.tiles ?? [];
+    const movingIds = new Set();
+    if (payload.type === "tile")  movingIds.add(payload.tileId);
+    if (payload.type === "tiles") {
+      for (const id of Object.keys(payload.positions ?? {})) movingIds.add(id);
+    }
+    const occupied = new Set();
+    for (const t of liveTiles) {
+      if (movingIds.has(t.id)) continue;
+      occupied.add(`${t.x ?? 0},${t.y ?? 0}`);
+    }
 
     if (payload.type === "macro") {
+      const { x, y } = nearestFreeCell(rawX, rawY, occupied);
       await State.update(this.activeId, d => ({
         ...d,
         tiles: [...(d.tiles ?? []), { id: State.newId("t"), macroId: payload.macroId, x, y, stripe: columnStripe || null }]
@@ -524,31 +590,55 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     } else if (payload.type === "group") {
       const group = State.readGroups().find(g => g.id === payload.groupId);
       if (!group) return;
-      const newTiles = group.macros.map((mid, i) => ({
-        id:      State.newId("t"),
-        macroId: mid,
-        x:       x + (i % 4),
-        y:       y + Math.floor(i / 4) * 2,
-        stripe:  columnStripe || group.color
-      }));
+      // Place each member at the nearest free cell starting from the
+      // intended 4-wide stride position. Each placement updates the
+      // occupancy map so subsequent group members don't collide either.
+      const newTiles = [];
+      for (let i = 0; i < group.macros.length; i++) {
+        const seedX = rawX + (i % 4);
+        const seedY = rawY + Math.floor(i / 4) * 2;
+        const { x, y } = nearestFreeCell(seedX, seedY, occupied);
+        occupied.add(`${x},${y}`);
+        newTiles.push({
+          id:      State.newId("t"),
+          macroId: group.macros[i],
+          x, y,
+          stripe:  columnStripe || group.color
+        });
+      }
       await State.update(this.activeId, d => ({ ...d, tiles: [...(d.tiles ?? []), ...newTiles] }));
     } else if (payload.type === "tile") {
+      const { x, y } = nearestFreeCell(rawX, rawY, occupied);
       await State.update(this.activeId, d => ({
         ...d,
         tiles: (d.tiles ?? []).map(t => t.id === payload.tileId ? { ...t, x, y } : t)
       }));
     } else if (payload.type === "tiles") {
-      // Multi-tile move: compute the delta the primary tile moved, then
-      // apply that delta to every other selected tile, preserving the
-      // group's relative layout. Negative coords are clamped at 0.
-      const dx = x - (payload.primaryPos?.x ?? 0);
-      const dy = y - (payload.primaryPos?.y ?? 0);
+      // Multi-tile move: snap the PRIMARY tile to the nearest free cell,
+      // then apply that delta to every other selected tile. Per-tile
+      // collision avoidance for non-primary tiles is best-effort - if
+      // applying the delta lands a non-primary tile on an occupied cell,
+      // we shift just that one tile to the nearest free cell.
+      const { x: px, y: py } = nearestFreeCell(rawX, rawY, occupied);
+      const dx = px - (payload.primaryPos?.x ?? 0);
+      const dy = py - (payload.primaryPos?.y ?? 0);
+      // Track per-tile post-move positions so multi-move tiles don't
+      // collide with EACH OTHER either.
+      const movedPositions = {};
+      for (const id of Object.keys(payload.positions ?? {})) {
+        const p = payload.positions[id];
+        const target = id === payload.primary
+          ? { x: px, y: py }
+          : nearestFreeCell(Math.max(0, p.x + dx), Math.max(0, p.y + dy), occupied);
+        occupied.add(`${target.x},${target.y}`);
+        movedPositions[id] = target;
+      }
       await State.update(this.activeId, d => ({
         ...d,
         tiles: (d.tiles ?? []).map(t => {
-          const p = payload.positions?.[t.id];
-          if (!p) return t;
-          return { ...t, x: Math.max(0, p.x + dx), y: Math.max(0, p.y + dy) };
+          const np = movedPositions[t.id];
+          if (!np) return t;
+          return { ...t, x: np.x, y: np.y };
         })
       }));
     }
@@ -822,9 +912,12 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       return `<button type="button" class="${cls}" data-ctx-stripe="${s}" title="${escHtml(title)}" style="${style}">${inner}</button>`;
     }).join("");
 
+    // NB: this file only defines escHtml (not escAttr - that one lives in
+    // edit-tile-dialog.mjs). Use escHtml here; it's safe for both attribute
+    // and text contexts because it escapes &<>"' the same way.
     const renderGroupIcon = (g) => isImagePath(g.icon)
-      ? `<span class="md-ctx-icon"><img src="${escAttr(g.icon)}" alt="" style="width:14px;height:14px;border-radius:2px;object-fit:cover;"/></span>`
-      : `<span class="md-ctx-icon" style="color:${g.color}"><i class="${escAttr(g.icon)}"></i></span>`;
+      ? `<span class="md-ctx-icon"><img src="${escHtml(g.icon)}" alt="" style="width:14px;height:14px;border-radius:2px;object-fit:cover;"/></span>`
+      : `<span class="md-ctx-icon" style="color:${g.color}"><i class="${escHtml(g.icon)}"></i></span>`;
 
     const groupItems = groups.length === 0
       ? `<div class="md-ctx-item" data-ctx-add-group="">

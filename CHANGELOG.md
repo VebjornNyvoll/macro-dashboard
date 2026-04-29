@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.8] - 2026-04-29
+
+### Fixed
+
+- **Tile right-click context menu now opens.** v0.3.6's `renderGroupIcon` helper called `escAttr(...)` - but `escAttr` only exists in `edit-tile-dialog.mjs`; this file only defines `escHtml`. Every tile right-click hit `ReferenceError: escAttr is not defined` inside `#openContextMenu`, which v0.3.7's defensive try/catch surfaced clearly in F12. Replaced with `escHtml`, which is safe for both attribute and text contexts (escapes `& < > " '` identically).
+
+- **Drag ghost is no longer half-transparent.** v0.3.5 set the drag image to the source tile element via `setDragImage(tile, ...)`, but the same dragstart handler then adds the `.dragging` class which sets `opacity: 0.55`. The browser captures the source element's appearance at dragstart, so the ghost ended up faded - users saw the tile turn dark and assumed the drag never started. Drag image is now a clone of the tile with `.dragging` and `.selected` classes stripped and `opacity: 1` forced; positioned offscreen, snapshotted by the browser, then removed on the next tick. The ghost is now fully visible and tracks the cursor properly.
+
+- **Defensive `selectedTileIds instanceof Set` check** added to `dragstart` (matching v0.3.7's `#openContextMenu` defence). Same rationale - if the field somehow isn't a Set at the moment of dragstart, the dragstart no longer crashes mid-handler.
+
+### Added
+
+- **Drops never overlap existing tiles.** New `nearestFreeCell(x, y, occupied)` helper does an outward-spiral search for the nearest unoccupied cell. Applied to every drop type:
+  - **New macro from library** - if the drop cell is already taken, the new tile lands on the nearest free cell.
+  - **Group from library** - each group member is placed at its 4-wide-stride seed position, then snapped to the nearest free cell from there. The occupancy set updates as each tile is placed so group members don't collide with each other either.
+  - **Single tile move** - the moved tile resolves to the nearest free cell. The tile's *old* position doesn't count as occupied (it's leaving).
+  - **Multi-tile move** - the primary tile resolves to nearest free; the delta is applied to the rest of the selection. Per-tile fallback: if applying the delta to a non-primary tile lands it on an occupied cell, just that tile is shifted to the nearest free cell. The full multi-move occupancy is tracked so selection members don't collide with each other.
+
+### Files
+
+- Updated: [`scripts/apps/dashboard-app.mjs`](scripts/apps/dashboard-app.mjs) - `escAttr` → `escHtml` fix in `renderGroupIcon`; cloned-and-stripped drag ghost in tile dragstart; `selectedTileIds` defensive coercion in dragstart; new `nearestFreeCell` helper; `#onCanvasDrop` rewritten to consult `nearestFreeCell` for every payload type and track occupancy across multi-tile placements.
+
 ## [0.3.7] - 2026-04-29
 
 ### Fixed
