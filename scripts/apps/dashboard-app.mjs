@@ -246,7 +246,16 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
           game.macros.get(macroId)?.sheet.render(true);
           return;
         }
-        this.#openContextMenu(ev.clientX, ev.clientY, tile);
+        // Defensive try/catch: any error inside #openContextMenu would
+        // otherwise vanish into the event-listener void with no UI sign
+        // that the click was even received. Logging it surfaces the cause.
+        try {
+          console.log("Macro Dashboard | tile contextmenu - opening menu");
+          this.#openContextMenu(ev.clientX, ev.clientY, tile);
+        } catch (err) {
+          console.error("Macro Dashboard | tile context menu failed to open:", err);
+          ui.notifications.error("Macro Dashboard: tile context menu failed - see F12 console.");
+        }
       });
 
       tile.addEventListener("mouseenter", () => this.#showTooltip(tile));
@@ -836,8 +845,12 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     // selection-wide actions ABOVE the per-tile section. Below the
     // separator the regular per-tile menu still applies (acting on the
     // single right-clicked tile, not the whole selection).
-    const selectionActive = this.selectedTileIds.size > 1 && this.selectedTileIds.has(tileId);
-    const selectionN      = this.selectedTileIds.size;
+    // Defensive: if the field somehow isn't a Set (initialisation race,
+    // unforeseen subclass shenanigans, etc.) fall back to an empty Set so
+    // a missing `.size` / `.has` never crashes the menu open.
+    const selSet          = this.selectedTileIds instanceof Set ? this.selectedTileIds : new Set();
+    const selectionActive = selSet.size > 1 && selSet.has(tileId);
+    const selectionN      = selSet.size;
     const selectionHeader = !selectionActive ? "" : `
       <div style="padding:4px 10px 0;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--fdry-fg-muted);">
         Selection (${selectionN} tiles)

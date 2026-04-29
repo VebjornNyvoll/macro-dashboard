@@ -24,6 +24,23 @@ function escHtml(s) {
 
 function escAttr(s) { return escHtml(s); }
 
+/** Resolve Foundry's FilePicker class across versions:
+ *  - v13/v14 expose a wrapper at `foundry.applications.apps.FilePicker` whose
+ *    actual constructor is `.implementation`. Calling `new FilePicker()`
+ *    directly on the wrapper fails or behaves unexpectedly.
+ *  - v12 exposes a bare global `FilePicker` class.
+ *  Bare-identifier reads in strict-mode ES modules throw ReferenceError when
+ *  the identifier is undefined; `typeof X !== "undefined"` is the only probe
+ *  that never throws. */
+export function getFilePickerClass() {
+  const ns = foundry?.applications?.apps?.FilePicker;
+  if (ns?.implementation) return ns.implementation;
+  if (typeof ns === "function")          return ns;
+  if (typeof FilePicker !== "undefined") return FilePicker;
+  if (typeof window !== "undefined" && window.FilePicker) return window.FilePicker;
+  return null;
+}
+
 function renderStripePicker(currentStripe) {
   return STRIPE_OPTIONS.map((opt, i) => {
     const id = `md-stripe-opt-${i}`;
@@ -139,8 +156,7 @@ export class EditTileDialog {
       modal:       true,
       // Wire the icon-field "Browse..." button to Foundry's FilePicker. We
       // do this in the post-render hook because DialogV2.prompt's content
-      // is opaque HTML that we have no other handle on. Cross-version
-      // compatible: v12's global FilePicker, v13/14's namespaced one.
+      // is opaque HTML that we have no other handle on.
       render: (event, dialog) => {
         const root    = dialog?.element ?? event?.currentTarget;
         if (!root) return;
@@ -148,7 +164,7 @@ export class EditTileDialog {
         const pickBtn = root.querySelector("[data-pick-img]");
         if (!input || !pickBtn) return;
         pickBtn.addEventListener("click", () => {
-          const FP = foundry.applications?.apps?.FilePicker ?? globalThis.FilePicker;
+          const FP = getFilePickerClass();
           if (!FP) {
             ui.notifications.warn("File picker is not available in this Foundry version.");
             return;

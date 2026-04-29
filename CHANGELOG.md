@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.7] - 2026-04-29
+
+### Fixed
+
+- **`File picker is not available in this Foundry version` warning on v12.** v0.3.6's `FilePicker` resolution chain was `foundry.applications?.apps?.FilePicker ?? globalThis.FilePicker`. Two problems:
+  1. In v13/v14 the namespaced `foundry.applications.apps.FilePicker` is a *wrapper* object, not a constructor — `new` requires `.implementation`. The chain returned the wrapper but `new` against it failed silently or returned `null`.
+  2. In v12 `globalThis.FilePicker` was apparently undefined for the user (likely build-specific globalThis vs. window scoping). The bare-identifier read `FilePicker` is the only reliable v12 path, but it would throw `ReferenceError` in strict-mode ES modules if undefined — so it has to be guarded with `typeof FilePicker !== "undefined"`, which is the only probe that never throws on an unbound identifier.
+
+  New `getFilePickerClass()` helper in `edit-tile-dialog.mjs` (also imported by `create-group-dialog.mjs`) tries, in order: `foundry.applications.apps.FilePicker.implementation` (v13/v14), the namespaced wrapper itself if it's a function (older v13 builds), the bare global `FilePicker` (v12, via `typeof` probe), and `window.FilePicker` (final fallback). The "File picker not available" warning now only fires when none of those resolve — which should be effectively never.
+
+### Added
+
+- **Defensive try/catch + logging around `#openContextMenu`.** The v0.3.6 right-click-on-tile regression silently failed because any exception inside the contextmenu listener vanished into the event-listener void with no UI sign that the click was even received. The tile contextmenu handler now logs `Macro Dashboard | tile contextmenu - opening menu` to F12 console on click, wraps `#openContextMenu` in try/catch, and surfaces any thrown error both as `console.error` and as a `ui.notifications.error` so the user sees that something happened. If the regression persists, the F12 console will now show the actual cause rather than dead silence.
+- **Defensive `selectedTileIds instanceof Set` check** at the top of `#openContextMenu`. If the field somehow isn't a Set at the moment the menu is opened (initialisation race, framework subclass shenanigans, anything), the code falls back to an empty Set so the missing `.size` / `.has` calls never crash the menu open.
+
+### Files
+
+- Updated: [`scripts/apps/edit-tile-dialog.mjs`](scripts/apps/edit-tile-dialog.mjs) — exported `getFilePickerClass()` helper with v12 + v13/v14 + window fallbacks; both `render` callback and the create-group-dialog now use it.
+- Updated: [`scripts/apps/create-group-dialog.mjs`](scripts/apps/create-group-dialog.mjs) — imports `getFilePickerClass` from edit-tile-dialog; `#onPickIcon` uses it.
+- Updated: [`scripts/apps/dashboard-app.mjs`](scripts/apps/dashboard-app.mjs) — tile contextmenu listener wraps `#openContextMenu` in try/catch with `console.error` + `ui.notifications.error`; logs entry breadcrumb on every right-click; `#openContextMenu` defensively coerces `this.selectedTileIds` to a Set before reading `.size` / `.has`.
+
 ## [0.3.6] - 2026-04-29
 
 ### Fixed

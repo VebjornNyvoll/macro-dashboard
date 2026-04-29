@@ -1,8 +1,9 @@
 // Create / Edit Preset Group dialog - ApplicationV2 form with macro-picker
 // checklist. Returns the resulting group object via Promise resolution.
 
-import { MODULE_ID } from "../constants.mjs";
-import { State }     from "../module.mjs";
+import { MODULE_ID }          from "../constants.mjs";
+import { State }              from "../module.mjs";
+import { getFilePickerClass } from "./edit-tile-dialog.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -135,12 +136,11 @@ export class CreateGroupDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
   /** Open Foundry's FilePicker for the icon field. The selected path is
    *  written back to both the live <input> and the per-instance
-   *  presetIcon (so a re-render preserves the selection). Cross-version
-   *  compatible: v12's global FilePicker, v13/14's namespaced one. */
+   *  presetIcon (so a re-render preserves the selection). */
   static #onPickIcon(event, target) {
     const input = this.element.querySelector('input[name="icon"]');
     if (!input) return;
-    const FP = foundry.applications?.apps?.FilePicker ?? globalThis.FilePicker;
+    const FP = getFilePickerClass();
     if (!FP) {
       ui.notifications.warn("File picker is not available in this Foundry version.");
       return;
