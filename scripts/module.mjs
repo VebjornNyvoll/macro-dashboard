@@ -2,11 +2,16 @@
 // Registers settings, keybindings, scene-controls tool button, and exposes
 // the public API at game.macroDashboard.
 
-import { MacroDashboardApp } from "./apps/dashboard-app.mjs";
-import { MacroLibraryApp }   from "./apps/library-app.mjs";
+// IMPORTANT: keep `./constants.mjs` as the FIRST import so that MODULE_ID is
+// fully initialized before any of the app modules below are evaluated. They
+// access MODULE_ID at class-declaration time (in `static PARTS`) and would
+// otherwise hit a Temporal Dead Zone error through this circular graph.
+import { MODULE_ID }                          from "./constants.mjs";
+import { MacroDashboardApp }                  from "./apps/dashboard-app.mjs";
+import { MacroLibraryApp }                    from "./apps/library-app.mjs";
 import { SYSTEMS, API, registerBuiltinShims } from "./systems.js";
 
-export const MODULE_ID = "macro-dashboard";
+export { MODULE_ID };
 
 // ---------------------------------------------------------------------------
 // Settings & keybindings registration
@@ -278,22 +283,41 @@ Hooks.once("ready", () => {
 });
 
 // Scene-controls left-rail tool button (GM only)
+//
+// v12: `controls` is an Array of { name, tools: Array }. Token control is "token".
+// v13/v14: `controls` is a Record<string, control> keyed by control name. The
+// token control was renamed to "tokens" (plural) and `tools` is now a
+// Record<string, tool> keyed by tool name. The callback property is also
+// `onChange` instead of `onClick` (we set both - the unused one is ignored).
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user?.isGM) return;
-  const tokenControls = controls.find(c => c.name === "token");
-  if (!tokenControls) return;
 
   const binding = game.keybindings?.bindings?.get(`${MODULE_ID}.toggleDashboard`)?.[0];
   const keyLabel = binding?.key?.replace(/^Key/, "") ?? "M";
 
-  tokenControls.tools.push({
+  const tool = {
     name:    "macro-dashboard",
     title:   game.i18n.format("MACRO_DASHBOARD.SceneControl.Tooltip", { key: keyLabel }),
     icon:    "fa-solid fa-th",
     button:  true,
     visible: true,
-    onClick: () => MacroDashboardApp.toggle()
-  });
+    order:   99,
+    onClick: () => MacroDashboardApp.toggle(),
+    onChange: () => MacroDashboardApp.toggle()
+  };
+
+  // Locate the token control across both API shapes.
+  const tokenControls = Array.isArray(controls)
+    ? controls.find(c => c.name === "token")        // v12
+    : (controls.tokens ?? controls.token);          // v13/v14
+  if (!tokenControls) return;
+
+  // Add the tool across both API shapes.
+  if (Array.isArray(tokenControls.tools)) {
+    tokenControls.tools.push(tool);                 // v12
+  } else if (tokenControls.tools && typeof tokenControls.tools === "object") {
+    tokenControls.tools[tool.name] = tool;          // v13/v14
+  }
 });
 
 // Auto-switch: when the canvas displays a new scene, re-render the dashboard

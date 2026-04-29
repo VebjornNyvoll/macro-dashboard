@@ -2,7 +2,7 @@
 // (name, image, command) plus per-tile description (stored as macro flag) and
 // color stripe (stored on the tile). CSS-only :checked radio swatch picker.
 
-import { MODULE_ID } from "../module.mjs";
+import { MODULE_ID } from "../constants.mjs";
 
 const { DialogV2 } = foundry.applications.api;
 

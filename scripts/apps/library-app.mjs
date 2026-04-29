@@ -2,7 +2,8 @@
 // with collapsible cards (each draggable as a unit), "Create new group from
 // selection..." trigger.
 
-import { MODULE_ID, State }   from "../module.mjs";
+import { MODULE_ID }          from "../constants.mjs";
+import { State }              from "../module.mjs";
 import { CreateGroupDialog }  from "./create-group-dialog.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;

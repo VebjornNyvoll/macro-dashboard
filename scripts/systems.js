@@ -6,7 +6,7 @@
 // Pattern reference: foundry-vtt-module/cross-system-architecture.md (the
 // Item Piles pattern, with a smaller contract appropriate for macros).
 
-import { MODULE_ID, State } from "./module.mjs";
+import { State } from "./module.mjs";
 
 // First-party shims bundled with the module.
 // Add one entry here per system you ship a shim for.

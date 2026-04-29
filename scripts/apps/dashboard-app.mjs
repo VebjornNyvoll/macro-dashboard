@@ -2,7 +2,8 @@
 // drag-drop with snap, hover tooltip, right-click context menu with
 // stripe submenu and group submenu, edit-macro dialog integration.
 
-import { MODULE_ID, State }   from "../module.mjs";
+import { MODULE_ID }          from "../constants.mjs";
+import { State }              from "../module.mjs";
 import { EditTileDialog }     from "./edit-tile-dialog.mjs";
 import { CreateGroupDialog }  from "./create-group-dialog.mjs";
 

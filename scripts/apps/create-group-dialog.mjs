@@ -1,7 +1,8 @@
 // Create / Edit Preset Group dialog - ApplicationV2 form with macro-picker
 // checklist. Returns the resulting group object via Promise resolution.
 
-import { MODULE_ID, State } from "../module.mjs";
+import { MODULE_ID } from "../constants.mjs";
+import { State }     from "../module.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
