@@ -26,6 +26,14 @@ function escHtml(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+/** Heuristic: does `s` look like a file path (FilePicker output) rather than
+ *  a FontAwesome class string? Used to switch between <img> and <i> rendering
+ *  for group icons (which were FA-only before file-picker support landed). */
+function isImagePath(s) {
+  if (!s) return false;
+  return s.includes("/") || /\.(png|jpg|jpeg|svg|webp|gif|avif)$/i.test(s);
+}
+
 export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
@@ -70,6 +78,11 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
 
   // Per-instance UI state
   activeId = null;
+
+  // Box-selected tile ids (in the active dashboard). Populated by the
+  // canvas mousedown drag-rectangle in #onCanvasMouseDown; cleared on
+  // canvas click, on tile delete, after Group-from-selection, etc.
+  selectedTileIds = new Set();
 
   // Detached overlay DOM elements (mounted into <body>, not the app root)
   #tooltipEl = null;
@@ -167,13 +180,14 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     super._onRender?.(context, options);
     const root = this.element;
 
-    // Canvas drag-drop
+    // Canvas drag-drop + box-select
     const canvas = root.querySelector(".md-canvas:not([data-wired])");
     if (canvas) {
       canvas.dataset.wired = "1";
       canvas.addEventListener("dragover", this.#onCanvasDragOver.bind(this));
       canvas.addEventListener("dragleave", this.#onCanvasDragLeave.bind(this));
       canvas.addEventListener("drop", this.#onCanvasDrop.bind(this));
+      canvas.addEventListener("mousedown", this.#onCanvasMouseDown.bind(this));
     }
 
     // Tile interactions: drag, contextmenu, hover tooltip
@@ -183,7 +197,36 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       const macroId = tile.dataset.macroId;
 
       tile.addEventListener("dragstart", (ev) => {
-        ev.dataTransfer.setData("application/json", JSON.stringify({ type: "tile", tileId }));
+        // If the user drags a tile that's part of a multi-selection, send
+        // ALL selected tiles in the payload (with their starting positions)
+        // so the drop handler can move them as a group while preserving
+        // their relative offsets. Otherwise it's a single-tile drag.
+        const inSelection = this.selectedTileIds.size > 1 && this.selectedTileIds.has(tileId);
+        let payload;
+        if (inSelection) {
+          const positions = {};
+          const data = State.read();
+          for (const arr of Object.values(data)) {
+            if (!Array.isArray(arr)) continue;
+            for (const d of arr) {
+              if (d.id !== this.activeId) continue;
+              for (const t of (d.tiles ?? [])) {
+                if (this.selectedTileIds.has(t.id)) {
+                  positions[t.id] = { x: t.x ?? 0, y: t.y ?? 0 };
+                }
+              }
+            }
+          }
+          payload = {
+            type:       "tiles",
+            primary:    tileId,
+            primaryPos: positions[tileId] ?? { x: 0, y: 0 },
+            positions
+          };
+        } else {
+          payload = { type: "tile", tileId };
+        }
+        ev.dataTransfer.setData("application/json", JSON.stringify(payload));
         // "copyMove" so the canvas dragover (which sets dropEffect="copy"
         // for library drops) still accepts the move; the browser silently
         // suppresses the drop event when dropEffect is not in effectAllowed.
@@ -294,8 +337,17 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
   #snapTo(ev, canvas) {
     const rect = canvas.getBoundingClientRect();
     const cell = this.#cellSize();
-    const x = Math.max(0, Math.round((ev.clientX - rect.left - 12) / cell));
-    const y = Math.max(0, Math.round((ev.clientY - rect.top  - 12) / cell));
+    // Convert viewport-relative cursor coords into the canvas-inner's local
+    // coordinate system (which moves with scrollTop/scrollLeft), then snap
+    // such that the tile's CENTRE lands on the cursor. This matches the
+    // centred drag-image set in dragstart so the visible ghost and the
+    // actual drop position agree. Without the `- cell/2` offset the tile's
+    // top-left corner would land where the cursor was, dragging the visible
+    // ghost (which is centred) down and right.
+    const innerX = ev.clientX - rect.left + canvas.scrollLeft - 12 - cell / 2;
+    const innerY = ev.clientY - rect.top  + canvas.scrollTop  - 12 - cell / 2;
+    const x = Math.max(0, Math.round(innerX / cell));
+    const y = Math.max(0, Math.round(innerY / cell));
     return { x, y };
   }
 
@@ -321,6 +373,116 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
     if (ev.currentTarget.contains(ev.relatedTarget)) return;
     ev.currentTarget.classList.remove("drop-active");
     ev.currentTarget.querySelector(".md-drop-ghost")?.remove();
+  }
+
+  /** Box-select drag start. Left-click on empty canvas (not a tile) clears
+   *  any existing selection and begins a marquee. While the mouse moves
+   *  with the button held, an .md-select-box overlay is drawn inside the
+   *  canvas-inner. On mouseup, every .md-tile whose viewport bounding rect
+   *  intersects the box is added to selectedTileIds and given a
+   *  .selected outline. A click without measurable drag (< 4px) is treated
+   *  as a click-to-clear and does nothing else. Only fires in grid layout
+   *  - in columns layout, tiles snap into auto-binned columns and a
+   *    bounding-rect marquee makes no sense. */
+  #onCanvasMouseDown(ev) {
+    if (ev.button !== 0) return;
+    if (ev.target.closest(".md-tile")) return;
+    if (game.settings.get(MODULE_ID, SETTINGS.LAYOUT) !== "grid") return;
+
+    if (this.selectedTileIds.size) this.#clearSelection();
+
+    const canvasInner = this.element.querySelector(".md-canvas-inner");
+    if (!canvasInner) return;
+
+    const startX = ev.clientX;
+    const startY = ev.clientY;
+
+    const box = document.createElement("div");
+    box.className = "md-select-box";
+    canvasInner.appendChild(box);
+
+    const onMove = (mev) => {
+      const innerR = canvasInner.getBoundingClientRect();
+      const x1 = Math.min(startX, mev.clientX);
+      const y1 = Math.min(startY, mev.clientY);
+      const x2 = Math.max(startX, mev.clientX);
+      const y2 = Math.max(startY, mev.clientY);
+      box.style.left   = `${x1 - innerR.left}px`;
+      box.style.top    = `${y1 - innerR.top}px`;
+      box.style.width  = `${x2 - x1}px`;
+      box.style.height = `${y2 - y1}px`;
+    };
+
+    const onUp = (mev) => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup",   onUp);
+
+      const w = Math.abs(mev.clientX - startX);
+      const h = Math.abs(mev.clientY - startY);
+      if (w < 4 && h < 4) {
+        // Treat as click-to-clear; box never grew.
+        box.remove();
+        return;
+      }
+
+      const x1 = Math.min(startX, mev.clientX);
+      const y1 = Math.min(startY, mev.clientY);
+      const x2 = Math.max(startX, mev.clientX);
+      const y2 = Math.max(startY, mev.clientY);
+
+      for (const tileEl of this.element.querySelectorAll(".md-tile")) {
+        const r = tileEl.getBoundingClientRect();
+        // Standard AABB intersection test.
+        if (r.right > x1 && r.left < x2 && r.bottom > y1 && r.top < y2) {
+          tileEl.classList.add("selected");
+          this.selectedTileIds.add(tileEl.dataset.tileId);
+        }
+      }
+
+      box.remove();
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup",   onUp);
+  }
+
+  /** Clear the current multi-selection: empty the set and strip the
+   *  .selected class from every still-rendered tile. Safe to call when
+   *  there is no active selection (no-op). */
+  #clearSelection() {
+    if (!this.selectedTileIds.size) return;
+    this.selectedTileIds.clear();
+    this.element?.querySelectorAll(".md-tile.selected").forEach(el => { el.classList.remove("selected"); });
+  }
+
+  /** Bulk-delete every tile currently in the multi-selection from the
+   *  active dashboard. One settings write, not N. */
+  async #deleteSelection() {
+    const ids = new Set(this.selectedTileIds);
+    if (!this.activeId || !ids.size) return;
+    await State.update(this.activeId, d => ({
+      ...d,
+      tiles: (d.tiles ?? []).filter(t => !ids.has(t.id))
+    }));
+    ui.notifications.info(game.i18n.format("MACRO_DASHBOARD.Notification.SelectionDeleted", { n: ids.size }));
+    this.#clearSelection();
+    this.render();
+  }
+
+  /** Open the Create Preset Group dialog with the macros from every tile
+   *  in the selection pre-selected (deduped, since the same macro can
+   *  appear on multiple tiles). */
+  async #groupSelection() {
+    const macroIds = new Set();
+    for (const tileId of this.selectedTileIds) {
+      const found = this.#findTile(tileId);
+      if (found?.tile?.macroId) macroIds.add(found.tile.macroId);
+    }
+    if (!macroIds.size) return;
+    await CreateGroupDialog.open({ initialMacroIds: [...macroIds] });
+    this.#clearSelection();
+    game.macroDashboard?.MacroLibraryApp?.instance?.render?.();
+    this.render();
   }
 
   async #onCanvasDrop(ev) {
@@ -365,6 +527,20 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       await State.update(this.activeId, d => ({
         ...d,
         tiles: (d.tiles ?? []).map(t => t.id === payload.tileId ? { ...t, x, y } : t)
+      }));
+    } else if (payload.type === "tiles") {
+      // Multi-tile move: compute the delta the primary tile moved, then
+      // apply that delta to every other selected tile, preserving the
+      // group's relative layout. Negative coords are clamped at 0.
+      const dx = x - (payload.primaryPos?.x ?? 0);
+      const dy = y - (payload.primaryPos?.y ?? 0);
+      await State.update(this.activeId, d => ({
+        ...d,
+        tiles: (d.tiles ?? []).map(t => {
+          const p = payload.positions?.[t.id];
+          if (!p) return t;
+          return { ...t, x: Math.max(0, p.x + dx), y: Math.max(0, p.y + dy) };
+        })
       }));
     }
 
@@ -637,6 +813,10 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       return `<button type="button" class="${cls}" data-ctx-stripe="${s}" title="${escHtml(title)}" style="${style}">${inner}</button>`;
     }).join("");
 
+    const renderGroupIcon = (g) => isImagePath(g.icon)
+      ? `<span class="md-ctx-icon"><img src="${escAttr(g.icon)}" alt="" style="width:14px;height:14px;border-radius:2px;object-fit:cover;"/></span>`
+      : `<span class="md-ctx-icon" style="color:${g.color}"><i class="${escAttr(g.icon)}"></i></span>`;
+
     const groupItems = groups.length === 0
       ? `<div class="md-ctx-item" data-ctx-add-group="">
            <span class="md-ctx-icon"><i class="fa-solid fa-plus"></i></span>
@@ -644,7 +824,7 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
          </div>`
       : groups.map(g => `
           <div class="md-ctx-item" data-ctx-add-group="${g.id}">
-            <span class="md-ctx-icon" style="color:${g.color}"><i class="${g.icon}"></i></span>
+            ${renderGroupIcon(g)}
             <span>${escHtml(g.name)}</span>
           </div>`).join("") +
         `<div class="md-ctx-item" data-ctx-add-group="">
@@ -652,9 +832,34 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
            <span>${game.i18n.localize("MACRO_DASHBOARD.ContextMenu.NewGroupFromTile")}</span>
          </div>`;
 
+    // If the right-clicked tile is part of a multi-tile selection, prepend
+    // selection-wide actions ABOVE the per-tile section. Below the
+    // separator the regular per-tile menu still applies (acting on the
+    // single right-clicked tile, not the whole selection).
+    const selectionActive = this.selectedTileIds.size > 1 && this.selectedTileIds.has(tileId);
+    const selectionN      = this.selectedTileIds.size;
+    const selectionHeader = !selectionActive ? "" : `
+      <div style="padding:4px 10px 0;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--fdry-fg-muted);">
+        Selection (${selectionN} tiles)
+      </div>
+      <div class="md-ctx-item danger" data-ctx-action="deleteSelection">
+        <span class="md-ctx-icon"><i class="fa-solid fa-trash"></i></span>
+        <span>${game.i18n.format("MACRO_DASHBOARD.SelectionMenu.Delete", { n: selectionN })}</span>
+      </div>
+      <div class="md-ctx-item" data-ctx-action="groupSelection">
+        <span class="md-ctx-icon"><i class="fa-solid fa-folder-plus"></i></span>
+        <span>${game.i18n.format("MACRO_DASHBOARD.SelectionMenu.Group", { n: selectionN })}</span>
+      </div>
+      <div class="md-ctx-item" data-ctx-action="clearSelection">
+        <span class="md-ctx-icon"><i class="fa-solid fa-xmark"></i></span>
+        <span>${game.i18n.localize("MACRO_DASHBOARD.SelectionMenu.Clear")}</span>
+      </div>
+      <div class="md-ctx-sep"></div>
+    `;
+
     const menu = document.createElement("div");
     menu.className = "md-ctx macro-dashboard";
-    menu.innerHTML = `
+    menu.innerHTML = selectionHeader + `
       <div class="md-ctx-item" data-ctx-action="edit">
         <span class="md-ctx-icon"><i class="fa-solid fa-pen"></i></span>
         <span>${game.i18n.localize("MACRO_DASHBOARD.ContextMenu.Edit")}</span>
@@ -712,15 +917,18 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       const action = ctxItem.dataset.ctxAction;
       this.#closeContextMenu();
       switch (action) {
-        case "edit":      await this.editTile(tileId);       break;
-        case "duplicate": await this.duplicateTile(tileId);  break;
+        case "edit":             await this.editTile(tileId);       break;
+        case "duplicate":        await this.duplicateTile(tileId);  break;
         case "execute":
           await game.macros.get(macroId)?.execute({
             actor: canvas.tokens.controlled[0]?.actor,
             token: canvas.tokens.controlled[0]
           });
           break;
-        case "remove":    await this.removeTile(tileId);     break;
+        case "remove":           await this.removeTile(tileId);     break;
+        case "deleteSelection":  await this.#deleteSelection();     break;
+        case "groupSelection":   await this.#groupSelection();      break;
+        case "clearSelection":   this.#clearSelection();            break;
       }
     });
 

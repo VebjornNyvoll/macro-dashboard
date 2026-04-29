@@ -11,7 +11,13 @@
 
     <div class="form-group">
       <label>{{localize "MACRO_DASHBOARD.GroupDialog.Icon"}}</label>
-      <input type="text" name="icon" value="{{icon}}"/>
+      <div class="md-input-with-button">
+        <input type="text" name="icon" value="{{icon}}"/>
+        <button type="button" class="md-pick-btn" data-action="pickIcon"
+                title="{{localize 'MACRO_DASHBOARD.IconPicker.Title'}}">
+          <i class="fa-solid fa-folder-open"></i>
+        </button>
+      </div>
       <p class="hint">{{localize "MACRO_DASHBOARD.GroupDialog.IconHint"}}</p>
     </div>
 

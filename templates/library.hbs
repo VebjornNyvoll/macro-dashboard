@@ -64,7 +64,11 @@
                  title="{{name}}">
               <span class="grip"><i class="fa-solid fa-grip-vertical"></i></span>
               <div class="md-group-icon" style="--group-color: {{color}}; background: {{color}};">
-                <i class="{{icon}}"></i>
+                {{#if iconIsImage}}
+                  <img src="{{icon}}" alt=""/>
+                {{else}}
+                  <i class="{{icon}}"></i>
+                {{/if}}
               </div>
               <span class="md-group-name">{{name}}</span>
               <span class="md-group-count">{{countLabel}}</span>

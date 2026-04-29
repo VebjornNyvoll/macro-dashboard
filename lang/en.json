@@ -78,6 +78,12 @@
   "MACRO_DASHBOARD.TabContextMenu.MakeSceneScoped": "Move to current scene",
   "MACRO_DASHBOARD.TabContextMenu.Remove": "Delete Tab",
 
+  "MACRO_DASHBOARD.IconPicker.Title": "Browse for an image",
+  "MACRO_DASHBOARD.SelectionMenu.Delete": "Delete {n} tiles",
+  "MACRO_DASHBOARD.SelectionMenu.Group": "Group {n} tiles into a preset...",
+  "MACRO_DASHBOARD.SelectionMenu.Clear": "Clear selection",
+  "MACRO_DASHBOARD.Notification.SelectionDeleted": "Removed {n} tiles from the dashboard.",
+
   "MACRO_DASHBOARD.EditDialog.Title": "Edit Macro Slot",
   "MACRO_DASHBOARD.EditDialog.Name": "Name",
   "MACRO_DASHBOARD.EditDialog.Icon": "Icon",

@@ -8,6 +8,14 @@ import { CreateGroupDialog }  from "./create-group-dialog.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+/** Heuristic: does `s` look like a file path (FilePicker output) rather than
+ *  a FontAwesome class string? Used to switch between <img> and <i> rendering
+ *  for group icons (which were FA-only before file-picker support landed). */
+function isImagePath(s) {
+  if (!s) return false;
+  return s.includes("/") || /\.(png|jpg|jpeg|svg|webp|gif|avif)$/i.test(s);
+}
+
 export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
@@ -68,8 +76,11 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
       .filter(g => !term || g.name.toLowerCase().includes(term))
       .map(g => ({
         ...g,
-        expanded:   this.expandedGroups.has(g.id),
-        countLabel: game.i18n.format("MACRO_DASHBOARD.Library.GroupCount", { n: g.macros.length }),
+        expanded:    this.expandedGroups.has(g.id),
+        // Detect whether `icon` is a file path (set via the FilePicker) or a
+        // FontAwesome class string. Render accordingly in the template.
+        iconIsImage: isImagePath(g.icon),
+        countLabel:  game.i18n.format("MACRO_DASHBOARD.Library.GroupCount", { n: g.macros.length }),
         macroDetails: g.macros.map(mid => {
           const m = game.macros.get(mid);
           return { id: mid, name: m?.name ?? "(missing)", img: m?.img ?? "icons/svg/hazard.svg", missing: !m };

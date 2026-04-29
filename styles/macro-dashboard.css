@@ -523,6 +523,11 @@
   font-size: 12px;
   flex: none;
 }
+.md-group-icon img {
+  width: 18px; height: 18px;
+  object-fit: cover;
+  border-radius: 2px;
+}
 .md-group-name {
   flex: 1;
   font-family: var(--fdry-font-display);
@@ -792,8 +797,17 @@
   opacity: 0;
   pointer-events: none;
 }
-.md-stripe-picker label.md-stripe-swatch {
+/* The swatch class lives on a <label> in the Edit Tile dialog (CSS-only
+   :checked radio swatches) AND on a <button> in the Create Group dialog.
+   The previous `label.md-stripe-swatch` selector only styled the <label>
+   case, so the Create Group "Accent Color" picker rendered as bare browser
+   buttons (~1em tall horizontal stripes). Drop the qualifier so the rule
+   applies to both. The button reset (padding/appearance) is a no-op for
+   labels but neutralises the browser's default <button> styling. */
+.md-stripe-picker .md-stripe-swatch {
   width: 26px; height: 26px;
+  padding: 0;
+  appearance: none;
   border-radius: 4px;
   border: 1px solid var(--fdry-border-light);
   cursor: pointer;
@@ -802,17 +816,65 @@
   font-size: 11px;
   transition: outline 80ms;
 }
-.md-stripe-picker label.md-stripe-none {
+.md-stripe-picker .md-stripe-none {
   background: transparent;
   border-style: dashed;
 }
-.md-stripe-picker input[type="radio"]:checked + label.md-stripe-swatch {
+.md-stripe-picker .md-stripe-swatch.active {
   outline: 2px solid var(--fdry-rule-gold-bright);
   outline-offset: 1px;
 }
-.md-stripe-picker input[type="radio"]:focus-visible + label.md-stripe-swatch {
+.md-stripe-picker input[type="radio"]:checked + .md-stripe-swatch {
+  outline: 2px solid var(--fdry-rule-gold-bright);
+  outline-offset: 1px;
+}
+.md-stripe-picker input[type="radio"]:focus-visible + .md-stripe-swatch {
   outline: 2px solid var(--fdry-rule-gold-bright);
   outline-offset: 2px;
+}
+
+/* ============ Input-with-icon-button (file picker) ============ */
+.md-input-with-button {
+  display: flex;
+  gap: 4px;
+  align-items: stretch;
+}
+.md-input-with-button input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+.md-input-with-button .md-pick-btn {
+  flex: none;
+  width: 32px;
+  padding: 0;
+  appearance: none;
+  background: var(--fdry-bg-panel-2);
+  border: 1px solid var(--fdry-border-input);
+  border-radius: 3px;
+  color: var(--fdry-fg-secondary);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+}
+.md-input-with-button .md-pick-btn:hover {
+  background: var(--fdry-bg-panel-3);
+  border-color: var(--fdry-rule-gold);
+  color: var(--fdry-accent-bright);
+}
+
+/* ============ Box-select on the canvas + selected-tile outline ============ */
+.md-select-box {
+  position: absolute;
+  border: 1.5px dashed var(--fdry-rule-gold-bright);
+  background: rgba(199, 154, 58, 0.08);
+  pointer-events: none;
+  z-index: 30;
+  border-radius: 2px;
+}
+.md-tile.selected {
+  outline: 2px solid var(--fdry-rule-gold-bright);
+  outline-offset: 1px;
+  background: var(--fdry-bg-panel-3);
 }
 
 /* ============ Inline submenu inside the context menu ============ */

@@ -73,7 +73,13 @@ export class EditTileDialog {
 
           <div class="form-group">
             <label>${game.i18n.localize("MACRO_DASHBOARD.EditDialog.Icon")}</label>
-            <input type="text" name="img" value="${escAttr(macro.img)}"/>
+            <div class="md-input-with-button">
+              <input type="text" name="img" value="${escAttr(macro.img)}"/>
+              <button type="button" class="md-pick-btn" data-pick-img
+                      title="${escAttr(game.i18n.localize("MACRO_DASHBOARD.IconPicker.Title"))}">
+                <i class="fa-solid fa-folder-open"></i>
+              </button>
+            </div>
             <p class="hint">${game.i18n.localize("MACRO_DASHBOARD.EditDialog.IconHint")}</p>
           </div>
 
@@ -130,7 +136,30 @@ export class EditTileDialog {
         }
       },
       rejectClose: false,
-      modal:       true
+      modal:       true,
+      // Wire the icon-field "Browse..." button to Foundry's FilePicker. We
+      // do this in the post-render hook because DialogV2.prompt's content
+      // is opaque HTML that we have no other handle on. Cross-version
+      // compatible: v12's global FilePicker, v13/14's namespaced one.
+      render: (event, dialog) => {
+        const root    = dialog?.element ?? event?.currentTarget;
+        if (!root) return;
+        const input   = root.querySelector('input[name="img"]');
+        const pickBtn = root.querySelector("[data-pick-img]");
+        if (!input || !pickBtn) return;
+        pickBtn.addEventListener("click", () => {
+          const FP = foundry.applications?.apps?.FilePicker ?? globalThis.FilePicker;
+          if (!FP) {
+            ui.notifications.warn("File picker is not available in this Foundry version.");
+            return;
+          }
+          new FP({
+            type:    "image",
+            current: input.value || "icons/svg/dice-target.svg",
+            callback: (path) => { input.value = path; }
+          }).render(true);
+        });
+      }
     });
   }
 }

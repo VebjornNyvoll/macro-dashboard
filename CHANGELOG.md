@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] - 2026-04-29
+
+### Fixed
+
+- **Drop position now matches what the cursor is hovering over.** `#snapTo` had two bugs that compounded:
+  1. It didn't account for `canvas.scrollLeft` / `canvas.scrollTop`, so once the user scrolled the dashboard, the snap target diverged from the visible cursor position by `scroll/cell` cells.
+  2. It computed snap such that the tile's TOP-LEFT corner landed where the cursor was — but v0.3.5's `setDragImage` change centred the visible drag-ghost on the cursor. The two visuals disagreed, getting worse the larger the tile size.
+
+  Both fixed: cursor coords are now converted into the canvas-inner's local coord system (with scroll), and `cell/2` is subtracted before rounding so the tile's CENTRE lands on the cursor. Drop ghost and drag image now agree pixel-for-pixel.
+
+- **Accent color picker in Create / Edit Group dialog rendered as bare browser buttons.** The CSS rule `.md-stripe-picker label.md-stripe-swatch` only matched `<label>` elements, so the `<button>` swatches in the group dialog inherited only default browser styling — they came out roughly 1em tall as horizontal stripes with no visible color. Selector dropped the `label` qualifier and added `padding: 0; appearance: none;` so the rule applies to both `<label>` (Edit Tile) and `<button>` (Create Group) usages and overrides the browser's button defaults.
+
+### Added
+
+- **File picker on the icon field** in both the Create / Edit Preset Group dialog and the Edit Tile dialog. A new "browse" button next to the icon input opens Foundry's `FilePicker` (image type, current path pre-filled). Selecting a file writes the path back into the input. Cross-version compatible: prefers `foundry.applications.apps.FilePicker` (v13/14) and falls back to the global `FilePicker` (v12).
+
+- **Group icons can now be image paths**, not only FontAwesome class strings. The library and the per-tile context menu both detect path-like values (contain `/`, or end in `.png|.jpg|.jpeg|.svg|.webp|.gif|.avif`) via a new `isImagePath` helper and render `<img>` for paths, `<i>` for FA classes. Existing FA-class group icons keep working unchanged.
+
+- **Box-select on the dashboard grid.** Left-click-and-drag on empty canvas (in grid layout, GM only) draws a marquee. Every tile whose viewport bounding rect intersects the box gets a gold outline and is added to the selection. A click without a measurable drag (< 4 px) clears the selection. The new selection unlocks two right-click actions:
+  - **Delete N tiles** — bulk-deletes the entire selection in a single settings-write.
+  - **Group N tiles into a preset...** — opens the Create Preset Group dialog with all selected macros pre-checked (deduped, since the same macro can appear on multiple tiles).
+  - **Clear selection** — same effect as clicking empty canvas.
+
+- **Multi-tile drag.** Dragging any tile that's part of a multi-selection now moves the entire selection, preserving every tile's position relative to the dragged "primary". Implemented by serialising all selected tiles' starting positions into the dragstart payload and computing a single delta on drop. Out-of-bounds positions are clamped at `(0, 0)`.
+
+### Files
+
+- Updated: [`scripts/apps/dashboard-app.mjs`](scripts/apps/dashboard-app.mjs) — `#snapTo` (cursor-centred + scroll-aware); `selectedTileIds` instance field; `#onCanvasMouseDown` for marquee drag; `#clearSelection`, `#deleteSelection`, `#groupSelection` helpers; multi-drag payload in tile dragstart; `tiles` payload type in `#onCanvasDrop`; selection-aware header in `#openContextMenu`; image-path-aware `renderGroupIcon` helper.
+- Updated: [`scripts/apps/library-app.mjs`](scripts/apps/library-app.mjs) — `isImagePath` helper; `iconIsImage` flag on each group in `_prepareContext`.
+- Updated: [`scripts/apps/edit-tile-dialog.mjs`](scripts/apps/edit-tile-dialog.mjs) — icon input wrapped in `.md-input-with-button`; `render` callback wires the new browse button to `FilePicker`.
+- Updated: [`scripts/apps/create-group-dialog.mjs`](scripts/apps/create-group-dialog.mjs) — `pickIcon` action handler that opens `FilePicker` and writes back into the input + `presetIcon` instance field.
+- Updated: [`templates/create-group.hbs`](templates/create-group.hbs) — icon input wrapped in `.md-input-with-button` with a `data-action="pickIcon"` button.
+- Updated: [`templates/library.hbs`](templates/library.hbs) — group icon switches between `<img>` and `<i>` on `iconIsImage`.
+- Updated: [`styles/macro-dashboard.css`](styles/macro-dashboard.css) — stripe-picker selector fix; `.md-input-with-button` and `.md-pick-btn` layout for the file-picker button; `.md-select-box` and `.md-tile.selected` for the marquee + selection outline; `.md-group-icon img` sizing.
+- Updated: [`lang/en.json`](lang/en.json) — IconPicker / SelectionMenu / Notification.SelectionDeleted keys.
+
 ## [0.3.5] - 2026-04-29
 
 ### Fixed

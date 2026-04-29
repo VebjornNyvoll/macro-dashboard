@@ -20,9 +20,10 @@ export class CreateGroupDialog extends HandlebarsApplicationMixin(ApplicationV2)
     },
     position: { width: 540 },
     actions:  {
-      pickColor:  CreateGroupDialog.#onPickColor,
+      pickColor:   CreateGroupDialog.#onPickColor,
       toggleMacro: CreateGroupDialog.#onToggleMacro,
-      cancel:     CreateGroupDialog.#onCancel
+      cancel:      CreateGroupDialog.#onCancel,
+      pickIcon:    CreateGroupDialog.#onPickIcon
     },
     form: {
       handler:        CreateGroupDialog.#onSubmit,
@@ -130,6 +131,28 @@ export class CreateGroupDialog extends HandlebarsApplicationMixin(ApplicationV2)
 
   static #onCancel() {
     this.close();
+  }
+
+  /** Open Foundry's FilePicker for the icon field. The selected path is
+   *  written back to both the live <input> and the per-instance
+   *  presetIcon (so a re-render preserves the selection). Cross-version
+   *  compatible: v12's global FilePicker, v13/14's namespaced one. */
+  static #onPickIcon(event, target) {
+    const input = this.element.querySelector('input[name="icon"]');
+    if (!input) return;
+    const FP = foundry.applications?.apps?.FilePicker ?? globalThis.FilePicker;
+    if (!FP) {
+      ui.notifications.warn("File picker is not available in this Foundry version.");
+      return;
+    }
+    new FP({
+      type:    "image",
+      current: input.value || "icons/svg/dice-target.svg",
+      callback: (path) => {
+        this.presetIcon = path;
+        input.value     = path;
+      }
+    }).render(true);
   }
 
   static async #onSubmit(event, form, formData) {
