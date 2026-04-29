@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-04-29
+
+### Fixed
+
+- **Module failed to load when enabled (regression in v0.3.0).** A circular import between `scripts/module.mjs` and the app modules under `scripts/apps/` triggered a Temporal Dead Zone `ReferenceError`: each app class evaluated `static PARTS = { template: \`modules/${MODULE_ID}/...\` }` at class-declaration time, which read the imported `MODULE_ID` binding before `module.mjs` had executed its own `export const MODULE_ID = "..."` line. The entry module aborted, `Hooks.once("init", ...)` never registered, and users saw an enabled module with no settings, no keybindings, and no toolbar button. Extracted `MODULE_ID` into a new leaf module [`scripts/constants.mjs`](scripts/constants.mjs) (no imports of its own) and repointed every consumer there. `module.mjs` re-exports `MODULE_ID` for back-compat.
+- **Scene-controls button missing on Foundry v13/v14.** The `getSceneControlButtons` hook used the v12-only API: `controls` was treated as an Array and the token control as `"token"` (singular). v13/v14 changed `controls` to `Record<string, SceneControl>`, renamed the control to `"tokens"` (plural), changed `tools` to `Record<string, SceneControlTool>`, and replaced `onClick` with `onChange`. The hook now feature-detects (`Array.isArray`) and adds the tool with the matching shape on either runtime, and sets both `onClick` and `onChange` so the same tool object works on v12 and v13/v14.
+
+### Files
+
+- New: [`scripts/constants.mjs`](scripts/constants.mjs) — single source of truth for `MODULE_ID`. Intentionally a leaf module to break the circular import.
+- Updated: `scripts/module.mjs` — re-exports `MODULE_ID` from constants; rewritten `getSceneControlButtons` for v12 + v13/v14 compatibility.
+- Updated: `scripts/systems.js`, `scripts/apps/dashboard-app.mjs`, `scripts/apps/library-app.mjs`, `scripts/apps/create-group-dialog.mjs`, `scripts/apps/edit-tile-dialog.mjs` — `MODULE_ID` import repointed at `../constants.mjs`. `State` is still imported from `module.mjs` (only read inside method bodies, so no TDZ risk).
+
 ## [0.3.0] - 2026-04-28
 
 ### Added
