@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.3] - 2026-04-29
+
+### Fixed - the actual root cause
+
+- **Release zip was missing `systems/`.** `.github/workflows/release.yml` listed only `module.json README.md LICENSE scripts/ styles/ templates/ lang/` in its `zip` invocation - `systems/` was never bundled. `scripts/systems.js` does `import dnd5eShim from "../systems/dnd5e.js"`, which 404'd in every install via the Foundry manifest URL. That import failure aborted the entry module before any `Hooks.once("init", ...)` registration could fire - which is why no settings, no keybindings, and no scene-control button appeared.
+
+  This was THE bug. v0.3.0 had it. v0.3.1 had it. v0.3.2 had it. The TDZ fix in v0.3.1 and the CSS / listener fixes in v0.3.2 were all real and necessary - but none of them could ever take effect on a user install, because the module entry script never finished loading. I should have downloaded and inspected the actual published `module.zip` after v0.3.1 instead of relying on local-clone testing alone.
+
+  Verified: the v0.3.3 release zip contents include `systems/dnd5e.js`.
+
+### Added
+
+- **Verbose `console.log` breadcrumbs in `scripts/module.mjs`.** The module now logs `Macro Dashboard | <stage>` to the F12 console at every life-cycle stage:
+  - `module.mjs evaluating` (very first line; if absent, the entry script never ran - check Network tab for 404s)
+  - `imports resolved (constants, apps, systems)` (if absent but the previous line is present, an import threw)
+  - `init hook firing` / `init complete: 6 settings + 2 keybindings registered`
+  - `ready hook firing` / `public API exposed at game.macroDashboard`
+  - `getSceneControlButtons fired (controls is Array (v12)|Record (v13/v14))` (per render of the scene controls bar; identifies which API shape Foundry is passing)
+  - `Registered built-in shim for system "<id>"` (already present pre-0.3.3; logged only when the active system has a bundled shim, currently dnd5e)
+
+### Files
+
+- Updated: [`.github/workflows/release.yml`](.github/workflows/release.yml) - added `systems/` to the zip, plus a comment explaining why every runtime-loaded directory must be listed.
+- Updated: [`scripts/module.mjs`](scripts/module.mjs) - added 6 `console.log` breadcrumbs and a header comment explaining how to use them for diagnostics.
+
 ## [0.3.2] - 2026-04-29
 
 ### Fixed

@@ -1,6 +1,14 @@
 // Macro Dashboard - module entry point.
 // Registers settings, keybindings, scene-controls tool button, and exposes
 // the public API at game.macroDashboard.
+//
+// Diagnostics: this file logs `Macro Dashboard | <stage>` to the F12
+// console at every life-cycle stage. If you don't see at least the
+// "module.mjs evaluating" line, the entry script never ran and Foundry
+// is failing at the manifest / esmodules / 404 layer (check the Network
+// tab for failing requests).
+
+console.log("Macro Dashboard | module.mjs evaluating");
 
 // IMPORTANT: keep `./constants.mjs` as the FIRST import so that MODULE_ID is
 // fully initialized before any of the app modules below are evaluated. They
@@ -12,6 +20,8 @@ import { MacroLibraryApp }                    from "./apps/library-app.mjs";
 import { SYSTEMS, API, registerBuiltinShims } from "./systems.js";
 
 export { MODULE_ID, SETTINGS };
+
+console.log("Macro Dashboard | imports resolved (constants, apps, systems)");
 
 // ---------------------------------------------------------------------------
 // Settings & keybindings registration
@@ -202,8 +212,10 @@ export const State = {
 // Lifecycle hooks
 
 Hooks.once("init", () => {
+  console.log("Macro Dashboard | init hook firing");
   registerSettings();
   registerKeybindings();
+  console.log("Macro Dashboard | init complete: 6 settings + 2 keybindings registered");
 });
 
 // ---------------------------------------------------------------------------
@@ -263,6 +275,8 @@ function _onTileHotkey(ev) {
 }
 
 Hooks.once("ready", () => {
+  console.log("Macro Dashboard | ready hook firing");
+
   // Public API
   game.macroDashboard = {
     open:        () => MacroDashboardApp.toggle(),
@@ -273,6 +287,7 @@ Hooks.once("ready", () => {
     MacroDashboardApp,
     MacroLibraryApp
   };
+  console.log("Macro Dashboard | public API exposed at game.macroDashboard");
 
   // Auto-register first-party system shims (e.g. dnd5e)
   registerBuiltinShims();
@@ -303,6 +318,7 @@ Hooks.once("ready", () => {
 // Record<string, tool> keyed by tool name. The callback property is also
 // `onChange` instead of `onClick` (we set both - the unused one is ignored).
 Hooks.on("getSceneControlButtons", (controls) => {
+  console.log(`Macro Dashboard | getSceneControlButtons fired (controls is ${Array.isArray(controls) ? "Array (v12)" : "Record (v13/v14)"})`);
   if (!game.user?.isGM) return;
 
   const binding = game.keybindings?.bindings?.get(`${MODULE_ID}.toggleDashboard`)?.[0];

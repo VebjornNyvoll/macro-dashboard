@@ -46,6 +46,10 @@ jobs:
           DOWNLOAD: ${{ env.release_module_url }}
 
       - name: Create Module Archive
+        # CRITICAL: list EVERY runtime-loaded directory below. Anything
+        # missing here 404s in user installs and aborts the entry script.
+        # `systems/` is required because `scripts/systems.js` imports
+        # `../systems/<system-id>.js` shims (currently dnd5e.js).
         run: |
           zip --recurse-paths ./module.zip \
             module.json \
@@ -54,7 +58,8 @@ jobs:
             scripts/ \
             styles/ \
             templates/ \
-            lang/
+            lang/ \
+            systems/
 
       - name: Update Release With Files
         uses: ncipollo/release-action@v1
