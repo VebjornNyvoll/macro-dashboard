@@ -8,11 +8,18 @@
 
 import { State } from "./module.mjs";
 
-// First-party shims bundled with the module.
-// Add one entry here per system you ship a shim for.
-import dnd5eShim from "../systems/dnd5e.js";
-const BUILTIN_SHIMS = {
-  dnd5e: dnd5eShim
+// First-party shims bundled with the module, loaded LAZILY via dynamic
+// `import()` so a missing or 404'd shim file degrades to a warning
+// instead of aborting the entire module entry script. (Static imports
+// at module top level run unconditionally - even on systems for which
+// the shim is irrelevant - and any failure cascades up through every
+// importer until the entry module fails to evaluate.) The active game
+// system's loader is invoked at most once, from registerBuiltinShims().
+//
+// Add one entry per system you ship a shim for. Key MUST match
+// `game.system.id.toLowerCase()`.
+const BUILTIN_SHIM_LOADERS = {
+  dnd5e: () => import("../systems/dnd5e.js").then(m => m.default)
 };
 
 // ---------------------------------------------------------------------------
@@ -70,14 +77,24 @@ export const SYSTEMS = {
   }
 };
 
-/** Auto-register first-party shims at ready time. */
+/** Auto-register the first-party shim for the active game system, if one
+ *  exists in BUILTIN_SHIM_LOADERS. Returns immediately; the shim file is
+ *  fetched + registered asynchronously via dynamic import. A missing
+ *  shim file is logged as a warning, NOT thrown - so a packaging bug
+ *  in `systems/<id>.js` never breaks module load. */
 export function registerBuiltinShims() {
   const id = game.system.id.toLowerCase();
-  const shim = BUILTIN_SHIMS[id];
-  if (shim) {
+  const loader = BUILTIN_SHIM_LOADERS[id];
+  if (!loader) {
+    console.log(`Macro Dashboard | No built-in shim for system "${id}" - using DEFAULT_SETTINGS. Companion modules can register one via game.macroDashboard.API.addSystemIntegration(shim).`);
+    return;
+  }
+  loader().then(shim => {
     SYSTEMS.addSystem(shim, "latest");
     console.log(`Macro Dashboard | Registered built-in shim for system "${id}"`);
-  }
+  }).catch(err => {
+    console.warn(`Macro Dashboard | Failed to load built-in shim for system "${id}" - falling back to DEFAULT_SETTINGS. Cause:`, err);
+  });
 }
 
 // ---------------------------------------------------------------------------

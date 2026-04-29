@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.4] - 2026-04-29
+
+### Fixed - defensive against the v0.3.3 class of bug
+
+- **System shims are now loaded lazily via dynamic `import()`.** Previously, `scripts/systems.js` did `import dnd5eShim from "../systems/dnd5e.js"` at module top level — a static import that runs unconditionally regardless of which system the user has active, and which aborts the entire module entry script if the file is missing or 404s. This was the mechanism by which the missing-`systems/`-in-zip bug (fixed in v0.3.3 by including `systems/` in the release archive) silently broke module load for users on cyberpunk-red-core, swade, pf2e, etc. - systems for which the dnd5e shim was never relevant.
+
+  v0.3.4 replaces the static `import` with a `BUILTIN_SHIM_LOADERS` map of dynamic `import()` thunks, fetched only when the active system has a shim entry, and wrapped in a `.catch()` that downgrades any failure to a console warning. The module continues to work with `DEFAULT_SETTINGS` if the shim file is missing.
+
+  Practical effect: even if the release pipeline ever drops a shim file again, the module still loads. Users on systems without a built-in shim see a clear "no shim for system X - using defaults" log instead of a load failure.
+
+### Files
+
+- Updated: [`scripts/systems.js`](scripts/systems.js) - replaced static `import dnd5eShim from "../systems/dnd5e.js"` with a `BUILTIN_SHIM_LOADERS` map of dynamic-import thunks; `registerBuiltinShims()` now `.then/.catch`-handles the async load so a missing shim warns instead of throwing.
+
 ## [0.3.3] - 2026-04-29
 
 ### Fixed - the actual root cause
