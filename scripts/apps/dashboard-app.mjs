@@ -184,7 +184,13 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
 
       tile.addEventListener("dragstart", (ev) => {
         ev.dataTransfer.setData("application/json", JSON.stringify({ type: "tile", tileId }));
-        ev.dataTransfer.effectAllowed = "move";
+        // "copyMove" so the canvas dragover (which sets dropEffect="copy"
+        // for library drops) still accepts the move; the browser silently
+        // suppresses the drop event when dropEffect is not in effectAllowed.
+        ev.dataTransfer.effectAllowed = "copyMove";
+        // Centre the drag-ghost on the cursor instead of letting the browser
+        // anchor it to wherever the user happened to click inside the tile.
+        ev.dataTransfer.setDragImage(tile, tile.offsetWidth / 2, tile.offsetHeight / 2);
         tile.classList.add("dragging");
         this.#hideTooltip();
       });
@@ -215,12 +221,19 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       });
     }
 
-    // Tab interactions: rename via dblclick + drag-to-reorder within scope
+    // Tab interactions: rename via dblclick, drag-to-reorder within scope,
+    // right-click for the tab context menu (rename / duplicate / toggle
+    // scope / delete).
     for (const tab of root.querySelectorAll(".md-tab[data-tab-id]:not([data-wired])")) {
       tab.dataset.wired = "1";
       tab.addEventListener("dblclick", (ev) => {
         if (ev.target.closest(".md-tab-close")) return;
         this.#startInlineRename(tab.dataset.tabId, tab);
+      });
+      tab.addEventListener("contextmenu", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this.#openTabContextMenu(ev.clientX, ev.clientY, tab);
       });
       tab.addEventListener("dragstart", (ev) => {
         ev.stopPropagation();
@@ -228,6 +241,8 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
           type: "tab", tabId: tab.dataset.tabId, scope: tab.dataset.tabScope
         }));
         ev.dataTransfer.effectAllowed = "move";
+        // Centre the drag-ghost on the cursor for the tab too.
+        ev.dataTransfer.setDragImage(tab, tab.offsetWidth / 2, tab.offsetHeight / 2);
         tab.classList.add("dragging");
       });
       tab.addEventListener("dragend", () => tab.classList.remove("dragging"));
@@ -719,5 +734,137 @@ export class MacroDashboardApp extends HandlebarsApplicationMixin(ApplicationV2)
       document.addEventListener("mousedown", onDoc);
       document.addEventListener("keydown", onKey);
     }, 0);
+  }
+
+  // -----------------------------------------------------------------------
+  // Tab right-click context menu
+  //
+  // Reuses the same #ctxMenuEl + #ctxDocListeners infrastructure as the tile
+  // context menu (so opening one closes the other). Items: rename inline,
+  // duplicate this tab, toggle scope (global <-> currently-viewed scene),
+  // delete (with confirm if non-empty).
+
+  #openTabContextMenu(x, y, tabEl) {
+    this.#closeContextMenu();
+    this.#hideTooltip();
+
+    const tabId    = tabEl.dataset.tabId;
+    const scope    = tabEl.dataset.tabScope;     // "global" or "scene"
+    const isGlobal = scope === "global";
+
+    const menu = document.createElement("div");
+    menu.className = "md-ctx macro-dashboard";
+    menu.innerHTML = `
+      <div class="md-ctx-item" data-ctx-action="rename">
+        <span class="md-ctx-icon"><i class="fa-solid fa-pen"></i></span>
+        <span>${game.i18n.localize("MACRO_DASHBOARD.TabContextMenu.Rename")}</span>
+      </div>
+      <div class="md-ctx-item" data-ctx-action="duplicate">
+        <span class="md-ctx-icon"><i class="fa-solid fa-copy"></i></span>
+        <span>${game.i18n.localize("MACRO_DASHBOARD.TabContextMenu.Duplicate")}</span>
+      </div>
+      <div class="md-ctx-item" data-ctx-action="toggleScope">
+        <span class="md-ctx-icon"><i class="fa-solid ${isGlobal ? "fa-map-location-dot" : "fa-globe"}"></i></span>
+        <span>${game.i18n.localize(isGlobal ? "MACRO_DASHBOARD.TabContextMenu.MakeSceneScoped" : "MACRO_DASHBOARD.TabContextMenu.MakeGlobal")}</span>
+      </div>
+      <div class="md-ctx-sep"></div>
+      <div class="md-ctx-item danger" data-ctx-action="remove">
+        <span class="md-ctx-icon"><i class="fa-solid fa-trash"></i></span>
+        <span>${game.i18n.localize("MACRO_DASHBOARD.TabContextMenu.Remove")}</span>
+      </div>
+    `;
+
+    document.body.appendChild(menu);
+    const rect = menu.getBoundingClientRect();
+    const px = Math.min(x, window.innerWidth  - rect.width  - 8);
+    const py = Math.min(y, window.innerHeight - rect.height - 8);
+    menu.style.left = `${px}px`;
+    menu.style.top  = `${py}px`;
+
+    menu.addEventListener("click", async (ev) => {
+      const ctxItem = ev.target.closest("[data-ctx-action]");
+      if (!ctxItem) return;
+      const action = ctxItem.dataset.ctxAction;
+      this.#closeContextMenu();
+      switch (action) {
+        case "rename": {
+          const liveTab = this.element.querySelector(`.md-tab[data-tab-id="${tabId}"]`);
+          if (liveTab) this.#startInlineRename(tabId, liveTab);
+          break;
+        }
+        case "duplicate":   await this.#duplicateTab(tabId);   break;
+        case "toggleScope": await this.#toggleTabScope(tabId); break;
+        case "remove":      await this.#confirmRemoveTab(tabId); break;
+      }
+    });
+
+    this.#ctxMenuEl = menu;
+
+    // Outside-click + Escape dismiss
+    const onDoc = (ev) => { if (!menu.contains(ev.target)) this.#closeContextMenu(); };
+    const onKey = (ev) => { if (ev.key === "Escape") this.#closeContextMenu(); };
+    this.#ctxDocListeners = { onDoc, onKey };
+    setTimeout(() => {
+      document.addEventListener("mousedown", onDoc);
+      document.addEventListener("keydown", onKey);
+    }, 0);
+  }
+
+  /** Duplicate the tab with the given id. The clone gets fresh tile ids
+   *  (so edits to one don't propagate to the other) and the active tab
+   *  switches to the new copy. */
+  async #duplicateTab(tabId) {
+    const clone = await State.duplicate(tabId);
+    if (!clone) return;
+    this.activeId = clone.id;
+    this.render();
+  }
+
+  /** Toggle the tab's scope between "global" and the currently-viewed scene.
+   *  No-op if the current scope is a scene other than the viewed one (which
+   *  shouldn't happen in normal UI flow because tabs only render for global
+   *  + the viewed scene). */
+  async #toggleTabScope(tabId) {
+    const data = State.read();
+    let currentScope = null;
+    for (const key of Object.keys(data)) {
+      if (Array.isArray(data[key]) && data[key].some(d => d.id === tabId)) {
+        currentScope = key;
+        break;
+      }
+    }
+    if (!currentScope) return;
+
+    const ctx = await this._prepareContext();
+    const newScope = currentScope === "global" ? ctx.viewingSceneId : "global";
+    if (!newScope) {
+      ui.notifications.warn("Macro Dashboard: cannot move tab - no current scene to attach it to.");
+      return;
+    }
+    await State.moveScope(tabId, newScope);
+    this.render();
+  }
+
+  /** Confirm-then-delete the tab. No confirm if the tab is empty. */
+  async #confirmRemoveTab(tabId) {
+    const data = State.read();
+    let found = null;
+    for (const arr of Object.values(data)) {
+      if (Array.isArray(arr)) found = arr.find(d => d.id === tabId) ?? found;
+    }
+    if (!found) return;
+
+    const confirmed = (found.tiles?.length ?? 0) === 0
+      ? true
+      : await foundry.applications.api.DialogV2.confirm({
+          window:      { title: game.i18n.localize("MACRO_DASHBOARD.Tab.ConfirmDelete.Title") },
+          content:     game.i18n.format("MACRO_DASHBOARD.Tab.ConfirmDelete.Content", { name: found.name }),
+          rejectClose: false
+        });
+    if (!confirmed) return;
+
+    await State.destroy(tabId);
+    if (this.activeId === tabId) this.activeId = null;
+    this.render();
   }
 }

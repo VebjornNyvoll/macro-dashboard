@@ -120,6 +120,9 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const macroId = row.dataset.macroId;
         ev.dataTransfer.setData("application/json", JSON.stringify({ type: "macro", macroId }));
         ev.dataTransfer.effectAllowed = "copy";
+        // Centre the drag-ghost on the cursor instead of anchoring to
+        // wherever the user clicked inside the row (default browser behaviour).
+        ev.dataTransfer.setDragImage(row, row.offsetWidth / 2, row.offsetHeight / 2);
         row.classList.add("dragging");
       });
       row.addEventListener("dragend", () => row.classList.remove("dragging"));
@@ -132,6 +135,8 @@ export class MacroLibraryApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const groupId = head.dataset.groupId;
         ev.dataTransfer.setData("application/json", JSON.stringify({ type: "group", groupId }));
         ev.dataTransfer.effectAllowed = "copy";
+        // Centre the drag-ghost on the cursor.
+        ev.dataTransfer.setDragImage(head, head.offsetWidth / 2, head.offsetHeight / 2);
         head.classList.add("dragging");
       });
       head.addEventListener("dragend", () => head.classList.remove("dragging"));

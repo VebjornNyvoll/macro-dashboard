@@ -167,6 +167,49 @@ export const State = {
     return false;
   },
 
+  /** Move a dashboard from its current scope to `newScope` (a scene id, or
+   *  the literal string "global"). Returns the moved dashboard, or null if
+   *  no dashboard with that id was found. */
+  async moveScope(dashboardId, newScope) {
+    const data = this.read();
+    let dashboard = null;
+    for (const key of Object.keys(data)) {
+      if (!Array.isArray(data[key])) continue;
+      const idx = data[key].findIndex(d => d.id === dashboardId);
+      if (idx >= 0) {
+        dashboard = data[key].splice(idx, 1)[0];
+        break;
+      }
+    }
+    if (!dashboard) return null;
+    if (!Array.isArray(data[newScope])) data[newScope] = [];
+    data[newScope].push(dashboard);
+    await this.write(data);
+    return dashboard;
+  },
+
+  /** Duplicate a dashboard within its current scope. Tiles are deep-cloned
+   *  with fresh ids so edits to the copy don't affect the original. Returns
+   *  the new dashboard, or null if `dashboardId` was not found. */
+  async duplicate(dashboardId) {
+    const data = this.read();
+    for (const key of Object.keys(data)) {
+      if (!Array.isArray(data[key])) continue;
+      const original = data[key].find(d => d.id === dashboardId);
+      if (!original) continue;
+      const clone = {
+        ...foundry.utils.deepClone(original),
+        id:    this.newId("d"),
+        name:  `${original.name} (copy)`,
+        tiles: (original.tiles ?? []).map(t => ({ ...t, id: this.newId("t") }))
+      };
+      data[key].push(clone);
+      await this.write(data);
+      return clone;
+    }
+    return null;
+  },
+
   /** Generate a new short id. */
   newId(prefix = "md") {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;

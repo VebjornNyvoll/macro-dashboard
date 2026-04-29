@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.5] - 2026-04-29
+
+### Fixed
+
+- **Cannot move a tile after placement.** Tile `dragstart` set `effectAllowed = "move"` while the canvas `dragover` set `dropEffect = "copy"` unconditionally. Per the HTML5 drag-and-drop spec, the browser silently suppresses the `drop` event when `dropEffect` is not in `effectAllowed`, so library drops worked (`copy`/`copy`) but tile-move drops did not (`move`/`copy`). Tile `dragstart` now sets `effectAllowed = "copyMove"`, which the canvas dragover's `dropEffect = "copy"` satisfies. Tile movement on the grid now works.
+
+- **Drag ghost misaligned with cursor.** Default browser behaviour is to anchor the drag ghost relative to wherever inside the source element the user happened to grab — which is why the offset varied. All three `dragstart` handlers (tile, library macro row, library group head) now call `ev.dataTransfer.setDragImage(el, el.offsetWidth / 2, el.offsetHeight / 2)` so the ghost is centred on the cursor. Tab-reorder dragstart got the same treatment.
+
+### Added
+
+- **Right-click context menu on tabs.** Right-clicking a tab in the dashboard opens a small menu with:
+  - **Rename Tab** — inline rename (same flow as double-click).
+  - **Duplicate Tab** — clones the tab in its current scope; tile ids are regenerated so edits to the copy don't propagate to the original. The active tab switches to the new copy.
+  - **Move to Global / Move to current scene** — flips the tab between the global-scope dashboard list and the currently-viewed scene's list. Resolves the long-standing "how do I make a tab global?" UX gap.
+  - **Delete Tab** — confirm-then-delete (no confirm for empty tabs); same logic as the tab strip's × button.
+
+### Changed
+
+- **`State.moveScope(dashboardId, newScope)`** — new helper that pulls a dashboard out of its current scope key and pushes it onto the target scope key in a single settings-write. Returns the moved dashboard, or `null` if no dashboard with that id was found.
+- **`State.duplicate(dashboardId)`** — new helper that deep-clones a dashboard within its current scope, regenerating the dashboard id and every tile id, and renaming to `"<original> (copy)"`. Returns the new dashboard, or `null` if the source id was not found.
+
+### Files
+
+- Updated: [`scripts/apps/dashboard-app.mjs`](scripts/apps/dashboard-app.mjs) — tile + tab `dragstart` use `setDragImage(el, w/2, h/2)`; tile `effectAllowed` is now `"copyMove"`; new `#openTabContextMenu`, `#duplicateTab`, `#toggleTabScope`, `#confirmRemoveTab` helpers; tab `contextmenu` listener added inside the wired-tab loop.
+- Updated: [`scripts/apps/library-app.mjs`](scripts/apps/library-app.mjs) — macro row + group head `dragstart` use `setDragImage(el, w/2, h/2)`.
+- Updated: [`scripts/module.mjs`](scripts/module.mjs) — added `State.moveScope` and `State.duplicate`.
+- Updated: [`lang/en.json`](lang/en.json) — five new `MACRO_DASHBOARD.TabContextMenu.*` keys.
+
 ## [0.3.4] - 2026-04-29
 
 ### Fixed - defensive against the v0.3.3 class of bug

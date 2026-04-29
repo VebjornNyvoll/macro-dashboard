@@ -72,6 +72,12 @@
   "MACRO_DASHBOARD.ContextMenu.GroupEdit": "Edit Group...",
   "MACRO_DASHBOARD.ContextMenu.GroupDelete": "Delete Group",
 
+  "MACRO_DASHBOARD.TabContextMenu.Rename": "Rename Tab",
+  "MACRO_DASHBOARD.TabContextMenu.Duplicate": "Duplicate Tab",
+  "MACRO_DASHBOARD.TabContextMenu.MakeGlobal": "Move to Global (visible on every scene)",
+  "MACRO_DASHBOARD.TabContextMenu.MakeSceneScoped": "Move to current scene",
+  "MACRO_DASHBOARD.TabContextMenu.Remove": "Delete Tab",
+
   "MACRO_DASHBOARD.EditDialog.Title": "Edit Macro Slot",
   "MACRO_DASHBOARD.EditDialog.Name": "Name",
   "MACRO_DASHBOARD.EditDialog.Icon": "Icon",
